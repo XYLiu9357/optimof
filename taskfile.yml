@@ -3,12 +3,15 @@ version: "3"
 env:
   MAIN: src/main.py
   EXTRACT_FEATURES: src/model_features/extract_all.py
+  RAC_EXTRACTOR: rac-extractor
+  COMPILER: /usr/bin/clang++
+  DEBUG_FLAGS: -g -Wall -fsanitize=address
 
 tasks:
   default:
-    - task: extract-all
+    - task: run-rac-test
 
-  # Feature extraction script
+  # Feature extraction
   extract-all:
     cmds:
       - python ${EXTRACT_FEATURES} {{.CLI_ARGS}}
@@ -22,7 +25,7 @@ tasks:
     cmds:
       - python data/check_features.py
 
-  # Recompile zeo++ library (may resolve system compatibility issues)
+  # zeo++ library
   compile-zeo:
     cmds:
       - task: clean-zeo
@@ -38,7 +41,35 @@ tasks:
       - (cd zeo++-0.3 && make clean)
       - echo "Existing zeo++ build removed."
 
-  # Clean temp folders
+  # RAC extractor
+  build-rac:
+    cmds:
+      - cmake -S ${RAC_EXTRACTOR} -B ${RAC_EXTRACTOR}/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="${COMPILER}" -DCMAKE_CXX_FLAGS="-O2"
+      - cmake --build ${RAC_EXTRACTOR}/build
+
+  run-rac-test:
+    deps:
+      - build-rac-debug
+    cmds:
+      - rac-extractor/build/rac-extractor test/ABAVIJ_clean.cif test/ABAVIJ_clean.out
+
+  build-rac-debug:
+    cmds:
+      - cmake -S ${RAC_EXTRACTOR} -B ${RAC_EXTRACTOR}/build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER="${COMPILER}" # -DCMAKE_CXX_FLAGS="${DEBUG_FLAGS}"
+      - cmake --build ${RAC_EXTRACTOR}/build
+
+  # Clean
+  clean-all:
+    deps:
+      - task: clean-temp
+      - task: clean-rac-build
+    cmds:
+      - echo "***clean complete***"
+
+  clean-rac-build:
+    cmds:
+      - rm -r ${RAC_EXTRACTOR}/build || true
+
   clean-temp:
     cmds:
       - rm -r temp_* || true
