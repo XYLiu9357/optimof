@@ -1,13 +1,43 @@
 version: "3"
 
 env:
-  MAIN: src/main.pys
-  FEAT_EXTRACT: src/feature_extraction/feature_extraction.py
+  MAIN: src/main.py
 
 tasks:
   default:
-    - task: feat-extract
+    - task: extract-all
 
-  feat-extract:
+  # Feature extraction script
+  extract-all:
     cmds:
-      - python ${FEAT_EXTRACT} {{.CLI_ARGS}}
+      - python src/model_features/extract_all.py {{.CLI_ARGS}}
+      - task: check-features
+
+  extract-feature:
+    cmds:
+      - python src/model_features/feature_extraction.py {{.CLI_ARGS}}
+
+  check-features:
+    cmds:
+      - python test/check_features.py
+
+  # Recompile zeo++ library (may resolve system compatibility issues)
+  compile-zeo:
+    cmds:
+      - task: clean-zeo
+      - echo "Compiling zeo++, this may take some time..."
+      - (cd zeo++-0.3/voro++/src && make)
+      - (cd zeo++-0.3 && make)
+      - echo "Compilation completed"
+
+  clean-zeo:
+    cmds:
+      - echo "Cleaning existing zeo++ build..."
+      - (cd zeo++-0.3/voro++/src && make clean)
+      - (cd zeo++-0.3 && make clean)
+      - echo "Existing zeo++ build removed."
+
+  # Clean temp folders
+  clean-temp:
+    cmds:
+      - rm -r temp_* || true

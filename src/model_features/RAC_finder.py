@@ -1,5 +1,5 @@
 """RAC_finder.py
-Compute revised autocorrelation functions (RACs) for feature generation. 
+Compute revised autocorrelation functions (RACs) for feature extraction. 
 
 Optimized I/O pipeline. Original design by Kulik's Group @MIT: 
 - https://github.com/hjkgrp/molSimplify
