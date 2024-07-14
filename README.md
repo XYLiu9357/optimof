@@ -20,7 +20,7 @@ OptiMOF employs a natural language processing (NLP)-based procedure to mine the 
 To use and develop with `RedBlackTree`, ensure that your environment meets the following requirements.
 
 - Basic usage: `python` version < `3.8` due to library compatibility issues
-- Feature generation: a `C++` compiler that supports `C++14` and [GNU Make](https://www.gnu.org/software/make/) are required for compiling the zeo++ package.
+- Feature extraction: a compiler that supports `C++14` and [GNU Make](https://www.gnu.org/software/make/) are required for compiling zeo++.
 - Run automated scripts: [Taskfile](https://taskfile.dev/installation/) version 3 is required to run the automation scripts.
 
 Make sure these tools and versions are properly installed and configured in your development environment to fully utilize the features and tests provided by this project.
