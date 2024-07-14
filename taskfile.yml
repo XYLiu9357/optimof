@@ -2,6 +2,7 @@ version: "3"
 
 env:
   MAIN: src/main.py
+  EXTRACT_FEATURES: src/model_features/extract_all.py
 
 tasks:
   default:
@@ -10,7 +11,7 @@ tasks:
   # Feature extraction script
   extract-all:
     cmds:
-      - python src/model_features/extract_all.py {{.CLI_ARGS}}
+      - python ${EXTRACT_FEATURES} {{.CLI_ARGS}}
       - task: check-features
 
   extract-feature:
@@ -19,7 +20,7 @@ tasks:
 
   check-features:
     cmds:
-      - python test/check_features.py
+      - python model/check_features.py
 
   # Recompile zeo++ library (may resolve system compatibility issues)
   compile-zeo:

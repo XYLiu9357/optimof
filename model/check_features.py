@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 
 print("***Entering check_features***")
 
-file_path = "test/features.csv"
+file_path = "model/features.csv"
 df = pd.read_csv(file_path)
 
-print(df.describe())
+print(df.iloc[:, 3:5])
+print(len(df.index))
 
 print("***Exiting check_features***")
