@@ -4,7 +4,7 @@ OptiMOF - Metal organic framework screening & optimization powered by deep learn
 
 ## Overview
 
-`OptiMOF` is an algorithm package for metal-organic framework (MOF) screening & optimization, powered by deep learning. This tool provides a comprehensive workflow tha includes mining and analyzing MOF literature, extracting critical features, predicting MOF stability based on crystallographic information files (CIFs).
+OptiMOF is an algorithm package for metal-organic framework (MOF) screening & optimization, powered by deep learning. This tool provides a comprehensive workflow tha includes mining and analyzing MOF literature, extracting critical features, predicting MOF stability based on crystallographic information files (CIFs).
 
 ## Supported features
 
@@ -17,7 +17,7 @@ OptiMOF - Metal organic framework screening & optimization powered by deep learn
 
 ### Prerequisites
 
-To use and develop with `OptiMOF`, ensure that your environment meets the following requirements.
+To use and develop with OptiMOF, ensure that your environment meets the following requirements.
 
 - Basic usage (subjected to change): `python < 3.8` due to library compatibility issues. See [here](environment.yml) for a list of dependencies.
 - Feature extraction: a compiler that supports `C++14` and [GNU Make](https://www.gnu.org/software/make/) are required for compiling zeo++.
