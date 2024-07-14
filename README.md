@@ -19,7 +19,7 @@ OptiMOF is an algorithm package for metal-organic framework (MOF) screening & op
 
 To use and develop with OptiMOF, ensure that your environment meets the following requirements.
 
-- Basic usage (subjected to change): `python < 3.8` due to library compatibility issues. See [here](environment.yml) for a list of dependencies.
+- Basic usage: `python < 3.8` due to compatibility issues. See [here](environment.yml) for a list of dependencies.
 - Feature extraction: a compiler that supports `C++14` and [GNU Make](https://www.gnu.org/software/make/) are required for compiling zeo++.
 - Run automated scripts: [Taskfile](https://taskfile.dev/installation/) version 3 is required to run the automation scripts.
 
