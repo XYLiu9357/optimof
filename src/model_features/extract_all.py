@@ -80,6 +80,6 @@ if __name__ == "__main__":
     print("***Running extract_all as main***")
     project_path = "."
     src_dir = os.path.join(".", "CoRE2019")
-    dest_dir = os.path.join(".", "model")
+    dest_dir = os.path.join(".", "data")
     extract_all_to_csv(src_dir, dest_dir)
     print("***extract_all exited successfully***")

@@ -135,8 +135,6 @@ def extract_features(project_path, target_path, id=""):
     )
     output4 = process.communicate()[0]
 
-
-
     # Extract features from output files
 
     """ 

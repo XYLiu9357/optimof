@@ -20,7 +20,7 @@ tasks:
 
   check-features:
     cmds:
-      - python model/check_features.py
+      - python data/check_features.py
 
   # Recompile zeo++ library (may resolve system compatibility issues)
   compile-zeo:
