@@ -10,7 +10,7 @@ OptiMOF is an algorithm package for metal-organic framework (MOF) screening & op
 
 1. Literature Mining: Utilizes NLP to process MOF literature and extract stability data.
 2. Feature Extraction: Automated feature extraction from [Crystallographic Information File](https://en.wikipedia.org/wiki/Crystallographic_Information_File).
-3. Machine Learning Models: Several artificial neural network (ANN) models were trained on geometric representations of MOFs found. These models can be used to make predictions on MOFs' thermal and solvent stability.
+3. Machine Learning Models: Several artificial neural network (ANN) models were trained on geometric representations of MOFs found, and can be used to make predictions on MOFs' thermal and solvent stability.
 4. Prediction with Uncertainty: Provides stability predictions on new MOFs with quantified uncertainty.
 
 ## Usage
