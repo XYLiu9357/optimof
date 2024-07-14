@@ -9,14 +9,24 @@ import multiprocessing as mp
 from feature_extraction import extract_features
 
 def _mp_extract(cif_file): 
+    """
+    Extract features from a given cif file. This function runs in a multiprocessing 
+    environment and involves file I/O through extract_features. 
+
+    :param cif_file: the name of the target cif file for feature extraction
+    """
+
     target_path = os.path.join(src_dir, cif_file)
     cif_without_suffix = cif_file[:-4] 
     cur_feature_df = extract_features(project_path, target_path, id=cif_without_suffix)
     return cur_feature_df
 
-def extract_all(src_dir) -> pd.DataFrame: 
+def extract_all(src_dir, max_lim=20) -> pd.DataFrame: 
     """
     Extract features from all cif files in the src_dir
+
+    :param src_dir: target directory for feature extraction
+    :param lim: maximum number of cif files to process, default to 100
     """
     if not os.path.isdir(src_dir): 
         print(f"Invalid source directory: {src_dir}")
@@ -24,17 +34,23 @@ def extract_all(src_dir) -> pd.DataFrame:
         print(f"Invalid destination directory: {dest_dir}")
     
     cif_files = [file for file in os.listdir(src_dir) if file.endswith('.cif')]
-    cif_files = cif_files[:4]
+    cif_files = cif_files[:max_lim]
     
     # Create as many processes as we can
     num_process = mp.cpu_count()
-    with mp.Pool(processes=max(len(cif_files), num_process)) as pool: 
+    with mp.Pool(processes=min(len(cif_files), num_process)) as pool: 
         results = pool.map(_mp_extract, cif_files)
     
-    all_feature_df = pd.concat(results, axis=1)
+    all_feature_df = pd.concat(results)
     return all_feature_df
 
-def extract_all_to_csv(src_dir, dest_dir, file_name="features.csv") -> None: 
+def extract_all_to_csv(src_dir, dest_dir, file_name="features.csv", max_lim=20) -> None: 
+    """
+    Extract features from all cif files in the src_dir
+
+    :param src_dir: target directory for feature extraction
+    :param lim: maximum number of cif files to process, default to 100
+    """
     if not os.path.isdir(src_dir): 
         print(f"Invalid source: {src_dir}")
     if not os.path.isdir(dest_dir): 
@@ -57,7 +73,7 @@ def extract_all_to_csv(src_dir, dest_dir, file_name="features.csv") -> None:
             else: 
                 print(f"Invalid option {do_overwrite}")
 
-    all_feature_df = extract_all(src_dir)
+    all_feature_df = extract_all(src_dir, max_lim)
     all_feature_df.to_csv(export_file_path)
 
 if __name__ == "__main__": 

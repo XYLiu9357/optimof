@@ -6,6 +6,7 @@ Reconstructed feature extraction pipeline.
 
 Important Notes: 
 - Only supports openbabel 2.4.1 for RAC extraction. 
+- openbabel 2.4.1 only supports python version < 3.8
 
 Reference: 
 - https://github.com/hjkgrp/MOFSimplify
@@ -13,14 +14,15 @@ Reference:
 
 import sys
 import os
-import shutil
 import subprocess
+import shutil
 import numpy as np
 import pandas as pd
 
 def extract_features(project_path, target_path, id=""):
     """
-    Extract features from one cif file specified by target_path. 
+    Extract features from one cif file specified by target_path. This function is 
+    thread-safe provided that id is different. 
 
     :param project_path: str, root path of the predictor project
     :param target_path: str, the name of the MOF being analyzed 
@@ -111,28 +113,29 @@ def extract_features(project_path, target_path, id=""):
         + " %s %s" % (cif_primitive_path, RAC_dir)
     )
 
-    """
-    YANG: This will be a problem. We are already creating multiple processes when running 
-    feature_extraction from extract_all. Tread carefully...
-    """
-    # four parallelized Zeo++ and RAC commands
-    process1 = subprocess.Popen(
+    # WARNING: This must run sequentially, as the whole function is running in 
+    # parallel. Running extra subprocesses causes overhead. 
+    process = subprocess.Popen(
         cmd1, stdout=subprocess.PIPE, stderr=None, shell=True
     )
-    process2 = subprocess.Popen(
+    output1 = process.communicate()[0]
+
+    process = subprocess.Popen(
         cmd2, stdout=subprocess.PIPE, stderr=None, shell=True
     )
-    process3 = subprocess.Popen(
+    output = process.communicate()[0]
+
+    process = subprocess.Popen(
         cmd3, stdout=subprocess.PIPE, stderr=None, shell=True
     )
-    process4 = subprocess.Popen(
+    output3 = process.communicate()[0]
+
+    process = subprocess.Popen(
         cmd4, stdout=subprocess.PIPE, stderr=None, shell=True
     )
+    output4 = process.communicate()[0]
 
-    output1 = process1.communicate()[0]
-    output2 = process2.communicate()[0]
-    output3 = process3.communicate()[0]
-    output4 = process4.communicate()[0]
+
 
     # Extract features from output files
 
