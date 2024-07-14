@@ -1,10 +1,10 @@
 # OptiMOF
 
-`OptiMOF` is an algorithm package for metal-organic framework (MOF) screening & optimization, powered by deep learning. This tool provides a comprehensive workflow tha includes mining and analyzing MOF literature, extracting critical features, predicting MOF stability based on crystallographic information files (CIFs).
+OptiMOF - Metal organic framework screening & optimization powered by deep learning.
 
 ## Overview
 
-`OptiMOF` employs a natural language processing (NLP)-based procedure to mine the existing MOF literature. This method focuses on extracting data related to structurally characterized MOFs, specifically their solvent removal and thermal stabilities.
+`OptiMOF` is an algorithm package for metal-organic framework (MOF) screening & optimization, powered by deep learning. This tool provides a comprehensive workflow tha includes mining and analyzing MOF literature, extracting critical features, predicting MOF stability based on crystallographic information files (CIFs).
 
 ## Supported features
 
