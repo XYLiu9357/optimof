@@ -5,6 +5,9 @@ and RAC_finder module.
 Modified I/O pipeline based on design by Kulik's Group @MIT: 
 - https://github.com/hjkgrp/molSimplify
 - https://github.com/hjkgrp/MOFSimplify
+
+Important Notes: 
+- Only supports openbabel 2.4.1. Newer versions will report error
 """
 
 import os
@@ -12,27 +15,6 @@ import shutil
 import subprocess
 import numpy as np
 import pandas as pd
-
-
-def get_primitive(datapath, writepath, occupancy_tolerance=1) -> None:
-    """
-    Calculates and writes the primitive cell of the provided structure.
-
-    :param datapath: str, the path to the cif file for which the primitive cell will be calculated.
-    :param writepath: str, the path to where the cif of the primitive cell will be written.
-    :param occupancy_tolerance: float, scales down occupancies for a site to one, if they sum to below occupancy_tolerance.
-    :return: None
-    """
-
-    from pymatgen.io.cif import CifParser
-
-    structure = CifParser(
-        datapath, occupancy_tolerance=occupancy_tolerance
-    ).parse_structures(primitive=True)[0]
-
-    sprim = structure.get_primitive_structure()
-    sprim.to(writepath, "cif")  # Output structure to a file.
-
 
 def generate_descriptor(project_path, name, structure, prediction_type, is_entry):
     """
@@ -47,8 +29,7 @@ def generate_descriptor(project_path, name, structure, prediction_type, is_entry
 
     :return: str or dict or array
         1. The string 'FAILED' (if descriptor generation fails)
-        2. A dictionary myDict (if the MOF being analyzed is in the training data)
-        3. Array myResult (if the MOF being analyzed is not in the training data)
+        2. The string myResult (directory with the generated features)
     """
 
     # Reinitialize: remove existing temp directory
@@ -78,10 +59,7 @@ def generate_descriptor(project_path, name, structure, prediction_type, is_entry
     if not is_entry:  # have to generate the CSV
 
         # Next, running MOF featurization
-        try:
-            get_primitive(cif_dir + name + ".cif", cif_dir + name + "_primitive.cif")
-        except ValueError:
-            return "FAILED"
+        shutil.copy(cif_dir + name + ".cif", cif_dir + name + "_primitive.cif")
 
         # get_MOF_descriptors is used in RAC_getter.py to get RAC features.
         # The files that are generated from RAC_getter.py: lc_descriptors.csv, sbu_descriptors.csv, linker_descriptors.csv
@@ -273,105 +251,37 @@ def generate_descriptor(project_path, name, structure, prediction_type, is_entry
             if f.readline() == "FAILED":
                 print("RAC generation failed.")
                 return "FAILED"
-
+                
         # Merging geometric information with the RAC information that is in the get_MOF_descriptors-generated files (lc_descriptors.csv, sbu_descriptors.csv, linker_descriptors.csv)
         try:
-            lc_df = pd.read_csv(RAC_dir + "lc_descriptors.csv")
-            sbu_df = pd.read_csv(RAC_dir + "sbu_descriptors.csv")
-            linker_df = pd.read_csv(RAC_dir + "linker_descriptors.csv")
+            lc_df = pd.read_csv(os.path.join(RAC_dir, "lc_descriptors.csv"))
+            sbu_df = pd.read_csv(os.path.join(RAC_dir, "sbu_descriptors.csv"))
+            linker_df = pd.read_csv(os.path.join(RAC_dir, "linker_descriptors.csv"))
         except Exception:  # csv files have been deleted
             return "FAILED"
 
-        lc_df = (
-            lc_df.mean().to_frame().transpose()
-        )  # averaging over all rows. Convert resulting Series into a DataFrame, then transpose
-        sbu_df = sbu_df.mean().to_frame().transpose()
-        linker_df = linker_df.mean().to_frame().transpose()
+        lc_df_numeric_mean = lc_df.select_dtypes(include=[np.number]).mean().to_frame().transpose()
+        sbu_df_numeric_mean = sbu_df.select_dtypes(include=[np.number]).mean().to_frame().transpose()
+        linker_df_numeric_mean = linker_df.select_dtypes(include=[np.number]).mean().to_frame().transpose()
 
-        merged_df = pd.concat([geo_df, lc_df, sbu_df, linker_df], axis=1)
+        merged_df = pd.concat([geo_df, lc_df_numeric_mean, sbu_df_numeric_mean, linker_df_numeric_mean], axis=1)
+
+        merged_dir = temp_dir + "merged_descriptors"
+        if "merged_descriptors" in os.listdir(temp_dir): 
+            os.rmdir(merged_dir)
+        os.mkdir(merged_dir)
 
         merged_df.to_csv(
-            temp_dir + "/merged_descriptors/" + name + "_descriptors.csv",
+            os.path.join(temp_dir, "merged_descriptors", name + "_descriptors.csv"),
             index=False,
         )  # written in /temp_file_creation_SESSIONID
 
     else:  # CSV is already written
         merged_df = pd.read_csv(
-            temp_dir + "/merged_descriptors/" + name + "_descriptors.csv"
+            os.path.join(temp_dir, "merged_descriptors", name + "_descriptors.csv"),
         )
 
-    if prediction_type == "solvent":
-
-        ANN_folder = project_path + "model/solvent/ANN/"
-        train_df = pd.read_csv(ANN_folder + "dropped_connectivity_dupes/train.csv")
-
-    if prediction_type == "thermal":
-        ANN_folder = project_path + "model/thermal/ANN/"
-        train_df = pd.read_csv(ANN_folder + "train.csv")
-
-    ### Here, I do a check to see if the current MOF is in the training data. ###
-    # If it is, then I return the known truth for the MOF, rather than make a prediction.
-
-    # Will iterate through the rows of the train pandas DataFrame
-
-    in_train = False
-
-    for (
-        index,
-        row,
-    ) in train_df.iterrows():  # iterate through rows of the training data MOFs
-
-        row_match = True  # gets set to false if any values don't match
-        matching_MOF = (
-            None  # gets assigned a value if the current MOF is in the training data
-        )
-
-        for (
-            col
-        ) in (
-            merged_df.columns
-        ):  # iterate through columns of the single new MOF we are predicting on (merged_df is just one row)
-            if col == "name" or col == "cif_file" or col == "Dif":
-                continue  # skip these
-                # Dif was sometimes differing between new Zeo++ call and training data value, for the same MOF
-
-            # If for any property a training MOF and the new MOF we are predicting on differ too much, we know they are not the same MOF
-            # So row_match is set to false for this training MOF
-            if np.absolute(row[col] - merged_df.iloc[0][col]) > 0.05 * np.absolute(
-                merged_df.iloc[0][col]
-            ):  # row[col] != merged_df.iloc[0][col] was leading to some same values being identified as different b/c of some floating 10^-15 values
-                row_match = False
-                break
-
-        if (
-            row_match and prediction_type == "solvent"
-        ):  # all columns for the row match! Some training MOF is the same as the new MOF
-            in_train = True
-            match_truth = row[
-                "flag"
-            ]  # the flag for the MOF that matches the current MOF
-            matching_MOF = row["CoRE_name"]
-            print(row["CoRE_name"])
-            break
-        if (
-            row_match and prediction_type == "thermal"
-        ):  # all columns for the row match! Some training MOF is the same as the new MOF
-            in_train = True
-            match_truth = row["T"]  # the flag for the MOF that matches the current MOF
-            match_truth = np.round(match_truth, 1)  # round to 1 decimal
-            matching_MOF = row["CoRE_name"]
-            # adding units
-            degree_sign = "\N{DEGREE SIGN}"
-            match_truth = str(match_truth) + degree_sign + "C"  # degrees Celsius
-            break
-
-    if in_train:
-        myDict = {"in_train": True, "truth": match_truth, "match": matching_MOF}
-        return myDict
-
-    ### End of training data check. ###
-    myResult = [temp_dir, ANN_folder]
-
+    myResult = temp_dir
     return myResult
 
 
@@ -380,19 +290,30 @@ if __name__ == "__main__":
 
     # Initializer
     project_path = os.path.abspath(".") + "/"
-    target = "test/ACAJIY_clean.cif"
+    target = "test/ABAVIJ_clean.cif"
     shutil.copyfile(target, "temp/test.cif")
 
     # Read structure
     structure = "FAILED"
     with open(target, "r") as test_cif:
-        structure = test_cif.read() # Potential buffer overflow
+        structure = test_cif.read()  # Potential buffer overflow
+    
+    # Assumes under project_path, there is a temp directory containing 
+    # the specified cif file. 
 
-    """
-    Assumes under project_path, there is a temp directory containing 
-    the specified cif file. 
-    """
-
-    print("WARNING: Running descriptor generator as main")
+    # Generate descriptors 
+    print("Running descriptor generator as main")
     result = generate_descriptor(project_path, "test", structure, "thermal", False)
-    print(result)
+
+    if result == "FAILED": 
+        print("generate_descriptors exit due to failure")
+        exit(1)
+    else: 
+        print(f"generate_descriptors exit successfully. Results stored at {result}")
+    
+    # Print out features obtained 
+    print("### Print features obtained ###")
+    feature_path = os.path.join(result, "merged_descriptors", "test_descriptors.csv")
+    feature_df = pd.read_csv(feature_path)
+    print(feature_df)
+
