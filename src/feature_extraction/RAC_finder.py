@@ -1,11 +1,12 @@
 """RAC_finder.py
 Compute revised autocorrelation functions (RACs) for feature generation. 
 
-Designed by Kulik's Group @MIT: 
+Optimized I/O pipeline. Original design by Kulik's Group @MIT: 
 - https://github.com/hjkgrp/molSimplify
 - https://github.com/hjkgrp/MOFSimplify
 """
 
+import os
 import sys
 from molSimplify.Informatics.MOF.MOF_descriptors import get_MOF_descriptors
 
@@ -13,20 +14,21 @@ from molSimplify.Informatics.MOF.MOF_descriptors import get_MOF_descriptors
 def main():
 
     # user command line inputs
-    cif_folder = sys.argv[1]
-    name = sys.argv[2]  # name of the MOF
-    RACs_folder = sys.argv[3]
+    primitive_path = sys.argv[1]  # name of the MOF
+    RAC_dir = sys.argv[2]
+
+    print(RAC_dir)
 
     # result log
-    f = open(RACs_folder + "RAC_getter_log.txt", "w")
+    f = open(os.path.join(RAC_dir, "RAC_getter_log.txt"), "w")
 
     try:
         # makes the linkers and sbus folders
         full_names, full_descriptors = get_MOF_descriptors(
-            cif_folder + name + "_primitive.cif",
+            primitive_path,
             3,
-            path=RACs_folder,
-            xyzpath=RACs_folder + name + ".xyz",
+            path=RAC_dir,
+            xyzpath=os.path.join(RAC_dir, "temp.xyz"),
         )
     except ValueError:
         f.write("FAILED")

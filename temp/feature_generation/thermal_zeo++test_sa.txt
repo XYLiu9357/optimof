@@ -1,3 +1,0 @@
-@ /home/flotch-linux/projects/snurr-group/mof-pred/temp/feature_generation/thermal_zeo++test_sa.txt Unitcell_volume: 1320.38   Density: 1.52493   ASA_A^2: 0 ASA_m^2/cm^3: 0 ASA_m^2/g: 0 NASA_A^2: 20.3067 NASA_m^2/cm^3: 153.794 NASA_m^2/g: 100.853
-Number_of_channels: 0 Channel_surface_area_A^2: 
-Number_of_pockets: 2 Pocket_surface_area_A^2: 10.0959  10.2108  

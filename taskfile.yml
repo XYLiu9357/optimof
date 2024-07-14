@@ -1,0 +1,13 @@
+version: "3"
+
+env:
+  MAIN: src/main.pys
+  FEAT_EXTRACT: src/feature_extraction/feature_extraction.py
+
+tasks:
+  default:
+    - task: feat-extract
+
+  feat-extract:
+    cmds:
+      - python ${FEAT_EXTRACT} {{.CLI_ARGS}}
