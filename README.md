@@ -10,7 +10,7 @@
 
 1. Literature Mining: Utilizes NLP to process MOF literature and extract stability data.
 2. Feature Extraction: Automated feature extraction from [Crystallographic Information File](https://en.wikipedia.org/wiki/Crystallographic_Information_File).
-3. Machine Learning Models: Artificial neural network models trained on extracted data using latent representations for stability prediction of new MOFs.
+3. Machine Learning Models: Several artificial neural network (ANN) models were trained on geometric representations of MOFs found. These models can be used to make predictions on MOFs' thermal and solvent stability.
 4. Prediction with Uncertainty: Provides stability predictions on new MOFs with quantified uncertainty.
 
 ## Usage
@@ -19,7 +19,7 @@
 
 To use and develop with `OptiMOF`, ensure that your environment meets the following requirements.
 
-- Basic usage (subjected to change): `python < 3.8` due to library compatibility issues
+- Basic usage (subjected to change): `python < 3.8` due to library compatibility issues. See [here](environment.yml) for a list of dependencies.
 - Feature extraction: a compiler that supports `C++14` and [GNU Make](https://www.gnu.org/software/make/) are required for compiling zeo++.
 - Run automated scripts: [Taskfile](https://taskfile.dev/installation/) version 3 is required to run the automation scripts.
 
