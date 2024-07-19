@@ -1,0 +1,1 @@
+The `data` directory stores the feature extracted using the `extract_all` function. The csv data used is a processed version of the data found at [MOFSimplify](https://github.com/hjkgrp/MOFSimplify) repository due to insufficient computing power when extracting the features.
