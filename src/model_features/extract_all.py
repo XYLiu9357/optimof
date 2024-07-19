@@ -34,7 +34,7 @@ def extract_all(src_dir, max_lim=20) -> pd.DataFrame:
         print(f"Invalid destination directory: {dest_dir}")
     
     cif_files = [file for file in os.listdir(src_dir) if file.endswith('.cif')]
-    cif_files = cif_files[:max_lim]
+    cif_files = cif_files[:min(max_lim, len(cif_files))]
     
     # Create as many processes as we can
     num_process = mp.cpu_count()

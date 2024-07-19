@@ -3,18 +3,23 @@ version: "3"
 env:
   MAIN: src/main.py
   EXTRACT_FEATURES: src/model_features/extract_all.py
-  RAC_EXTRACTOR: rac-extractor
+  MPI_EXTRACT_FEATURES: src/model_features/mpi_extract_all.py
   COMPILER: /usr/bin/clang++
   DEBUG_FLAGS: -g -Wall -fsanitize=address
 
 tasks:
   default:
-    - task: run-rac-test
+    - task: extract-all
 
   # Feature extraction
   extract-all:
     cmds:
       - python ${EXTRACT_FEATURES} {{.CLI_ARGS}}
+      - task: check-features
+
+  mpi-extract-all:
+    cmds:
+      - python ${MPI_EXTRACT_FEATURES} {{.CLI_ARGS}}
       - task: check-features
 
   extract-feature:
@@ -29,47 +34,15 @@ tasks:
   compile-zeo:
     cmds:
       - task: clean-zeo
-      - echo "Compiling zeo++, this may take some time..."
       - (cd zeo++-0.3/voro++/src && make)
       - (cd zeo++-0.3 && make)
-      - echo "Compilation completed"
 
   clean-zeo:
     cmds:
-      - echo "Cleaning existing zeo++ build..."
       - (cd zeo++-0.3/voro++/src && make clean)
       - (cd zeo++-0.3 && make clean)
-      - echo "Existing zeo++ build removed."
-
-  # RAC extractor
-  build-rac:
-    cmds:
-      - cmake -S ${RAC_EXTRACTOR} -B ${RAC_EXTRACTOR}/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="${COMPILER}" -DCMAKE_CXX_FLAGS="-O2"
-      - cmake --build ${RAC_EXTRACTOR}/build
-
-  run-rac-test:
-    deps:
-      - build-rac-debug
-    cmds:
-      - rac-extractor/build/rac-extractor test/ABAVIJ_clean.cif test/ABAVIJ_clean.out
-
-  build-rac-debug:
-    cmds:
-      - cmake -S ${RAC_EXTRACTOR} -B ${RAC_EXTRACTOR}/build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER="${COMPILER}" # -DCMAKE_CXX_FLAGS="${DEBUG_FLAGS}"
-      - cmake --build ${RAC_EXTRACTOR}/build
 
   # Clean
-  clean-all:
-    deps:
-      - task: clean-temp
-      - task: clean-rac-build
-    cmds:
-      - echo "***clean complete***"
-
-  clean-rac-build:
-    cmds:
-      - rm -r ${RAC_EXTRACTOR}/build || true
-
   clean-temp:
     cmds:
       - rm -r temp_* || true
