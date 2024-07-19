@@ -9,7 +9,6 @@ env:
 
 tasks:
   default:
-    - task: extract-all
 
   # Feature extraction
   extract-all:
