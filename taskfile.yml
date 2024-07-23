@@ -30,10 +30,14 @@ tasks:
     cmds:
       - python data/check_features.py
 
-  # Train model
+  # Model training and testing
   train-thermal:
     cmds:
       - python src/model_training/thermal_model.py
+
+  test-thermal:
+    cmds:
+      - python src/model_training/test_utils.py
 
   # zeo++ library
   compile-zeo:

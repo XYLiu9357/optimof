@@ -1,9 +1,9 @@
 {
     "input_size": 11,
-    "hidden_layers": [128, 64, 32, 16],
+    "hidden_layers": [128, 128, 64, 32, 16],
     "output_size": 1,
     "learning_rate": 0.001,
-    "batch_size": 16,
-    "patience": 10,
-    "num_epochs": 100
+    "batch_size": 64,
+    "patience": 15,
+    "num_epochs": 300
 }

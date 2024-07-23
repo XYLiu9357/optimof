@@ -14,9 +14,7 @@ import os
 import pandas as pd
 from typing import List, Dict
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
-from sklearn.metrics import r2_score, mean_squared_error
-import matplotlib.pyplot as plt
-import seaborn as sns
+from test_utils import ModelPerformanceTest
 
 import torch
 import torch.nn as nn
@@ -66,6 +64,7 @@ class ThermalModelPipeline:
     Attributes:
         project_path: str, root directory of project
         hyperparams: Dict, a dictionary that contains all the hyperparameters
+        device: torch.device, device used for computation
 
         model_input_features: np.ndarray, features used for training and validation
         model_input_labels: np.ndarray, labels used for training and validation
@@ -78,7 +77,6 @@ class ThermalModelPipeline:
     def __init__(
         self,
         project_path: str,
-        device: torch.cuda.device,
         hyperparams: Dict,
         all_df: pd.DataFrame,
         save=True,
@@ -87,6 +85,12 @@ class ThermalModelPipeline:
         self.project_path: str = project_path
         self.hyperparams: Dict = hyperparams
         self.train_test_split(all_df, test_size=0.2)
+
+        # Device setup: use GPU if possible
+        device: torch.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
+        self.device = device
 
         # Build model
         self.model_build()
@@ -100,7 +104,7 @@ class ThermalModelPipeline:
         # Save model if specified
         if save:
             model_file_path: str = os.path.join(
-                project_path, "model", "thermal_model.pickle"
+                project_path, "model", "thermal_model.pkl"
             )
             torch.save(self.model, model_file_path)
             print("**Model saved**")
@@ -180,12 +184,12 @@ class ThermalModelPipeline:
         epochs_no_improve = 0
         best_model = None
 
-        # Training loop
+        # Training loop: move batches to GPU during training
         for epoch in range(num_epochs):
             # Train
             self.model.train()
             for X_batch, y_batch in train_loader:
-                X_batch, y_batch = X_batch.to(device), y_batch.to(device)  # Move to GPU
+                X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
                 outputs = self.model(X_batch)
                 cur_loss = criterion(outputs, y_batch)
 
@@ -200,7 +204,7 @@ class ThermalModelPipeline:
             # Disable gradient calculations to save memory, just in case...
             with torch.no_grad():
                 for X_batch, y_batch in val_loader:
-                    X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+                    X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
                     outputs = self.model(X_batch)
                     cur_loss = criterion(outputs, y_batch)
                     val_loss += cur_loss.item()
@@ -229,24 +233,15 @@ class ThermalModelPipeline:
         else:
             print("No improvement during training")
 
-
-# Read data from specified path
-def read_data(
-    project_path: str, data_file_name: str, target_cols: List[str] = None
-) -> pd.DataFrame:
-    # Configure file path
-    data_dir: str = os.path.join(project_path, "data")
-    file_path: str = os.path.join(data_dir, data_file_name)
-
-    # Read data
-    df: pd.DataFrame = pd.read_csv(file_path)
-    return df[target_cols]
+    # Return test features and labels, for benchmarking
+    def get_test_data(self):
+        return self.test_features, self.test_labels
 
 
 if __name__ == "__main__":
     # File configs
     project_path: str = "."
-    data_file_name: str = "thermal_data.csv"
+    data_file_name: str = "thermal_all_data.csv"
     hyperparam_file_name = "hyperparams.json"
 
     # Read data
@@ -264,21 +259,42 @@ if __name__ == "__main__":
         "VSA",
         "cell_v",
     ]
-    thermal_all_df: pd.DataFrame = read_data(project_path, data_file_name, target_cols)
+    # Configure file path
+    data_dir: str = os.path.join(project_path, "data", "thermal")
+    all_data_file_path: str = os.path.join(data_dir, data_file_name)
+
+    # Read data
+    df: pd.DataFrame = pd.read_csv(all_data_file_path)
+    thermal_all_df = df[target_cols]
 
     # Read hyperparameters
     print("**Reading hyperparameter config**")
-    hyperparam_file_path = os.path.join(project_path, "model", hyperparam_file_name)
+    hyperparam_file_path: str = os.path.join(
+        project_path, "model", hyperparam_file_name
+    )
     with open(hyperparam_file_path, "r") as f:
-        hyperparams = json.load(f)
-
-    # Configure pyTorch device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        hyperparams: Dict = json.load(f)
 
     # Create, build, and train the model
     pipeline: ThermalModelPipeline = ThermalModelPipeline(
-        project_path, device, hyperparams, thermal_all_df
+        project_path, hyperparams, thermal_all_df
     )
 
-    # Check performance
-    pipeline.model_test_performance()
+    # Use test features and labels to benchmark performance
+    model_file_name: str = "thermal_model.pkl"
+    model_file_path: str = os.path.join(project_path, "model", model_file_name)
+    test_features, test_labels = pipeline.get_test_data()
+    performance_test: ModelPerformanceTest = ModelPerformanceTest(
+        model_file_path, test_features, test_labels
+    )
+
+    # Print a few accuracy metrics
+    performance_test.calculate_r2()
+    performance_test.calculate_mse()
+    performance_test.calculate_rmse()
+
+    # Save unused test data for future testing
+    test_data_path = os.path.join(data_dir, "thermal_test_data.pkl")
+    test_df: pd.DataFrame = pd.concat([test_labels, test_features], axis=1)
+    test_df.to_pickle(test_data_path)
+    print(f"**Test data saved at {test_data_path}**")
