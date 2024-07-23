@@ -156,6 +156,7 @@ class ThermalModelPipeline:
                 random_state=0,
             )
         )
+        print(train_features.values.dtype)
 
         # Prepare tensor data set.
         tensor_train_features = torch.tensor(train_features.values, dtype=torch.float32)
@@ -244,28 +245,15 @@ if __name__ == "__main__":
     data_file_name: str = "thermal_all_data.csv"
     hyperparam_file_name = "hyperparams.json"
 
-    # Read data
-    target_cols: List[str] = [
-        "T",
-        "GPOAV",
-        "GPONAV",
-        "GPOV",
-        "GSA",
-        "POAV",
-        "POAV_vol_frac",
-        "PONAV",
-        "PONAV_vol_frac",
-        "VPOV",
-        "VSA",
-        "cell_v",
-    ]
     # Configure file path
     data_dir: str = os.path.join(project_path, "data", "thermal")
     all_data_file_path: str = os.path.join(data_dir, data_file_name)
 
-    # Read data
+    # Read data: train on all features
+    removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode"]
+    removed_cols_set: set[str] = set(removed_cols)
     df: pd.DataFrame = pd.read_csv(all_data_file_path)
-    thermal_all_df = df[target_cols]
+    thermal_all_df = df.loc[:, ~df.columns.isin(removed_cols_set)]
 
     # Read hyperparameters
     print("**Reading hyperparameter config**")
