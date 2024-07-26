@@ -156,7 +156,12 @@ class ThermalModelPipeline:
                 random_state=0,
             )
         )
-        print(train_features.values.dtype)
+
+        # Ensure all data is numeric and handle NaN values
+        train_features = train_features.apply(pd.to_numeric, errors="raise")
+        val_features = val_features.apply(pd.to_numeric, errors="raise")
+        train_labels = train_labels.apply(pd.to_numeric, errors="raise")
+        val_labels = val_labels.apply(pd.to_numeric, errors="raise")
 
         # Prepare tensor data set.
         tensor_train_features = torch.tensor(train_features.values, dtype=torch.float32)
@@ -250,10 +255,9 @@ if __name__ == "__main__":
     all_data_file_path: str = os.path.join(data_dir, data_file_name)
 
     # Read data: train on all features
-    removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode"]
-    removed_cols_set: set[str] = set(removed_cols)
+    removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]
     df: pd.DataFrame = pd.read_csv(all_data_file_path)
-    thermal_all_df = df.loc[:, ~df.columns.isin(removed_cols_set)]
+    thermal_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
 
     # Read hyperparameters
     print("**Reading hyperparameter config**")

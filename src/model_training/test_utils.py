@@ -22,10 +22,11 @@ class ModelPerformanceTest:
         print(model_file_path)
 
         # Load the model
-        self.model = torch.load(model_file_path)
+        self.model = torch.load(model_file_path, weights_only=False)
         self.model.eval()  # Ensure the model is in evaluation mode
 
         # Convert test features and labels to tensors
+        test_features = test_features.apply(pd.to_numeric, errors="raise")
         self.test_features = torch.tensor(test_features.values, dtype=torch.float32).to(
             self.device
         )
