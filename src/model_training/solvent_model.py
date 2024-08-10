@@ -171,6 +171,10 @@ class SolventModelPipeline:
             all_features, all_labels, test_size=test_size, random_state=0
         )
 
+        # Reset indices to ensure alignment
+        self.test_features = self.test_features.reset_index(drop=True)
+        self.test_labels = self.test_labels.reset_index(drop=True)
+
     # Build the model with the specified hyperparameters
     def model_build(self):
         # The last layer of hidden_layer_sizes is the output layer size
@@ -339,6 +343,4 @@ if __name__ == "__main__":
     print(f"**Model saved at {model_file_path}**")
     test_data_path = os.path.join(data_dir, "solvent_test_data.pkl")
     test_all.to_pickle(test_data_path)
-    print(test_all)
-    print(not any(test_all.isna()))
     print(f"**Test data saved at {test_data_path}**")
