@@ -12,12 +12,14 @@ import seaborn as sns
 import pandas as pd
 import scipy.stats as stats
 
+from thermal_model import ThermalModel
 
 class ModelPerformanceTest:
 
     def __init__(
         self, model_file_path: str, test_features: pd.DataFrame, test_labels: pd.Series
     ):
+        self.project_path = project_path
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(model_file_path)
 
@@ -59,7 +61,7 @@ class ModelPerformanceTest:
         print(f"Root Mean Squared Error: {rmse:.4f}")
         return rmse
 
-    def plot_actual_vs_predicted(self):
+    def plot_actual_vs_predicted(self, save_dir):
         plt.figure(figsize=(10, 6))
         plt.scatter(self.test_labels, self.predictions, alpha=0.5)
         plt.plot(
@@ -70,9 +72,9 @@ class ModelPerformanceTest:
         plt.xlabel("Actual Values")
         plt.ylabel("Predicted Values")
         plt.title("Actual vs Predicted Values")
-        plt.show()
+        plt.savefig(os.path.join(save_dir, "actual_vs_predicted.png"))
 
-    def plot_residuals(self):
+    def plot_residuals(self, save_dir):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         plt.scatter(self.predictions, residuals, alpha=0.5)
@@ -80,24 +82,27 @@ class ModelPerformanceTest:
         plt.xlabel("Predicted Values")
         plt.ylabel("Residuals")
         plt.title("Residuals vs Predicted Values")
-        plt.show()
+        plt.savefig(os.path.join(save_dir, "residuals.png"))
 
-    def plot_residuals_distribution(self):
+
+    def plot_residuals_distribution(self, save_dir):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         sns.histplot(residuals, kde=True)
         plt.xlabel("Residuals")
         plt.title("Distribution of Residuals")
-        plt.show()
+        plt.savefig(os.path.join(save_dir, "residual_distribution.png"))
 
-    def plot_qq(self):
+
+    def plot_qq(self, save_dir):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         stats.probplot(residuals.flatten(), dist="norm", plot=plt)
         plt.title("QQ Plot of Residuals")
-        plt.show()
+        plt.savefig(os.path.join(save_dir, "qq_plot.png"))
 
-    def plot_pairwise(self):
+
+    def plot_pairwise(self, save_dir):
         residuals = self.test_labels - self.predictions
         feature_analysis = pd.DataFrame(
             self.test_features.cpu().numpy(),
@@ -105,7 +110,7 @@ class ModelPerformanceTest:
         )
         feature_analysis["Residuals"] = residuals
         sns.pairplot(feature_analysis)
-        plt.show()
+        plt.savefig(os.path.join(save_dir, "pairwise.png"))
 
 
 if __name__ == "__main__":
@@ -114,8 +119,10 @@ if __name__ == "__main__":
     # Configure paths
     project_path: str = "."
     data_dir: str = os.path.join(project_path, "data")
+
+    # Change these two lines to change the model tested
     test_data_path: str = os.path.join(data_dir, "thermal", "thermal_test_data.pkl")
-    model_file_path: str = os.path.join(project_path, "model", "thermal_model.pkl")
+    model_file_path: str = os.path.join(project_path, "model", "thermal_model.pkl") # "saved_models", 
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
@@ -124,11 +131,13 @@ if __name__ == "__main__":
 
     # Performance tests
     performance_test = ModelPerformanceTest(model_file_path, test_features, test_labels)
+    save_dir = os.path.join(".", "performance", "thermal")
 
     performance_test.calculate_r2()
     performance_test.calculate_mse()
-    performance_test.plot_actual_vs_predicted()
-    performance_test.plot_residuals()
-    performance_test.plot_residuals_distribution()
-    performance_test.plot_qq()
-    performance_test.plot_pairwise()
+    performance_test.calculate_rmse()
+    performance_test.plot_actual_vs_predicted(save_dir)
+    performance_test.plot_residuals(save_dir)
+    performance_test.plot_residuals_distribution(save_dir)
+    performance_test.plot_qq(save_dir)
+    # performance_test.plot_pairwise(save_dir)

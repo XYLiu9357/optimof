@@ -14,7 +14,6 @@ import os
 import pandas as pd
 from typing import List, Dict
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
-from test_utils import ModelPerformanceTest
 
 import torch
 import torch.nn as nn
@@ -113,7 +112,6 @@ class ThermalModelPipeline:
     def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
         all_features = all_df.iloc[:, 1:]
         all_labels = all_df.iloc[:, 0]
-
         (
             self.model_input_features,
             self.test_features,
@@ -248,7 +246,7 @@ if __name__ == "__main__":
     # File configs
     project_path: str = "."
     data_file_name: str = "thermal_all_data.csv"
-    hyperparam_file_name = "hyperparams.json"
+    hyperparam_file_name = "thermal_hyperparams.json"
 
     # Configure file path
     data_dir: str = os.path.join(project_path, "data", "thermal")
@@ -276,17 +274,10 @@ if __name__ == "__main__":
     model_file_name: str = "thermal_model.pkl"
     model_file_path: str = os.path.join(project_path, "model", model_file_name)
     test_features, test_labels = pipeline.get_test_data()
-    performance_test: ModelPerformanceTest = ModelPerformanceTest(
-        model_file_path, test_features, test_labels
-    )
-
-    # Print a few accuracy metrics
-    performance_test.calculate_r2()
-    performance_test.calculate_mse()
-    performance_test.calculate_rmse()
+    test_all = pd.concat([test_labels, test_features], axis=1)
 
     # Save unused test data for future testing
+    print(f"**Model saved at {model_file_path}**")
     test_data_path = os.path.join(data_dir, "thermal_test_data.pkl")
-    test_df: pd.DataFrame = pd.concat([test_labels, test_features], axis=1)
-    test_df.to_pickle(test_data_path)
+    test_all.to_pickle(test_data_path)
     print(f"**Test data saved at {test_data_path}**")
