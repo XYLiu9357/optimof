@@ -6,7 +6,7 @@ Requires a test set that was not used in training.
 import os
 import math
 import torch
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -60,6 +60,11 @@ class ThermalModelPerfTest:
         rmse = math.sqrt(mse)
         print(f"Root Mean Squared Error: {rmse:.4f}")
         return rmse
+
+    def calculate_mae(self):
+        mae = mean_absolute_error(self.test_labels, self.predictions)
+        print(f"Mean Absolute Error: {mae:.4f}")
+        return mae
 
     def plot_actual_vs_predicted(self, save_dir):
         plt.figure(figsize=(10, 6))
@@ -135,6 +140,7 @@ if __name__ == "__main__":
     performance_test.calculate_r2()
     performance_test.calculate_mse()
     performance_test.calculate_rmse()
+    performance_test.calculate_mae()
     performance_test.plot_actual_vs_predicted(save_dir)
     performance_test.plot_residuals(save_dir)
     performance_test.plot_residuals_distribution(save_dir)
