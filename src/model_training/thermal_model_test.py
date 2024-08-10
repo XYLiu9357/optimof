@@ -1,5 +1,5 @@
-"""regression_test_utils.py
-Utility class for evaluating performance of a regression model. 
+"""thermal_model_test.py
+Utility class for evaluating performance of the thermal breakdown temperature model. 
 Requires a test set that was not used in training. 
 """
 
@@ -14,7 +14,8 @@ import scipy.stats as stats
 
 from thermal_model import ThermalModel
 
-class RegModelPerformanceTest:
+
+class ThermalModelPerfTest:
 
     def __init__(
         self, model_file_path: str, test_features: pd.DataFrame, test_labels: pd.Series
@@ -83,7 +84,6 @@ class RegModelPerformanceTest:
         plt.title("Residuals vs Predicted Values")
         plt.savefig(os.path.join(save_dir, "residuals.png"))
 
-
     def plot_residuals_distribution(self, save_dir):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
@@ -92,14 +92,12 @@ class RegModelPerformanceTest:
         plt.title("Distribution of Residuals")
         plt.savefig(os.path.join(save_dir, "residual_distribution.png"))
 
-
     def plot_qq(self, save_dir):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         stats.probplot(residuals.flatten(), dist="norm", plot=plt)
         plt.title("QQ Plot of Residuals")
         plt.savefig(os.path.join(save_dir, "qq_plot.png"))
-
 
     def plot_pairwise(self, save_dir):
         residuals = self.test_labels - self.predictions
@@ -121,7 +119,9 @@ if __name__ == "__main__":
 
     # Change these two lines to change the model tested
     test_data_path: str = os.path.join(data_dir, "thermal", "thermal_test_data.pkl")
-    model_file_path: str = os.path.join(project_path, "model", "thermal_model.pkl") # "saved_models", 
+    model_file_path: str = os.path.join(
+        project_path, "model", "thermal_model.pkl"
+    )  # "saved_models",
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     test_features: pd.DataFrame = test_df.iloc[:, 1:]
 
     # Performance tests
-    performance_test = RegModelPerformanceTest(model_file_path, test_features, test_labels)
+    performance_test = ThermalModelPerfTest(model_file_path, test_features, test_labels)
     save_dir = os.path.join(".", "performance", "thermal")
 
     performance_test.calculate_r2()

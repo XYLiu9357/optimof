@@ -1,20 +1,27 @@
-"""biclass_test_utils.py
-Utility class for evaluating performance of a classification model. 
+"""solvent_model_test.py
+Utility class for evaluating performance of the solvent removal stability model. 
 Requires a test set that was not used in training. 
 """
 
 import os
-import math
 import torch
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, roc_curve
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    confusion_matrix,
+    roc_curve,
+)
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-import scipy.stats as stats
 
 from solvent_model import SolventModel
 
-class BiClassModelPerformanceTest:
+
+class SolventModelPerfTest:
 
     def __init__(
         self, model_file_path: str, test_features: pd.DataFrame, test_labels: pd.Series
@@ -40,7 +47,9 @@ class BiClassModelPerformanceTest:
         # Make predictions
         with torch.no_grad():
             logits = self.model(self.test_features)
-            self.predictions = torch.sigmoid(logits).cpu().numpy()  # Convert logits to probabilities
+            self.predictions = (
+                torch.sigmoid(logits).cpu().numpy()
+            )  # Convert logits to probabilities
 
         # Binarize predictions
         self.binary_predictions = (self.predictions >= 0.5).astype(int)
@@ -76,7 +85,7 @@ class BiClassModelPerformanceTest:
     def plot_confusion_matrix(self, save_dir):
         cm = confusion_matrix(self.test_labels, self.binary_predictions)
         plt.figure(figsize=(6, 4))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
         plt.xlabel("Predicted Labels")
         plt.ylabel("True Labels")
         plt.title("Confusion Matrix")
@@ -85,8 +94,12 @@ class BiClassModelPerformanceTest:
     def plot_roc_curve(self, save_dir):
         fpr, tpr, _ = roc_curve(self.test_labels, self.predictions)
         plt.figure(figsize=(10, 6))
-        plt.plot(fpr, tpr, label=f'AUC = {roc_auc_score(self.test_labels, self.predictions):.4f}')
-        plt.plot([0, 1], [0, 1], linestyle='--', color='red')  # Diagonal line
+        plt.plot(
+            fpr,
+            tpr,
+            label=f"AUC = {roc_auc_score(self.test_labels, self.predictions):.4f}",
+        )
+        plt.plot([0, 1], [0, 1], linestyle="--", color="red")  # Diagonal line
         plt.xlabel("False Positive Rate")
         plt.ylabel("True Positive Rate")
         plt.title("ROC Curve")
@@ -103,15 +116,18 @@ if __name__ == "__main__":
 
     # Change these two lines to change the model tested
     test_data_path: str = os.path.join(data_dir, "solvent", "solvent_test_data.pkl")
-    model_file_path: str = os.path.join(project_path, "model", "solvent_model.pkl") # "saved_models", 
+    model_file_path: str = os.path.join(
+        project_path, "model", "solvent_model.pkl"
+    )  # "saved_models",
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
+    print(test_df)
     test_labels: pd.DataFrame = test_df.iloc[:, 0]
     test_features: pd.DataFrame = test_df.iloc[:, 1:]
 
     # Performance tests
-    performance_test = BiClassModelPerformanceTest(model_file_path, test_features, test_labels)
+    performance_test = SolventModelPerfTest(model_file_path, test_features, test_labels)
     save_dir = os.path.join(".", "performance", "solvent")
 
     performance_test.calculate_accuracy()
@@ -121,4 +137,3 @@ if __name__ == "__main__":
     performance_test.calculate_auc()
     performance_test.plot_confusion_matrix(save_dir)
     performance_test.plot_roc_curve(save_dir)
-    # performance_test.plot_pairwise(save_dir)

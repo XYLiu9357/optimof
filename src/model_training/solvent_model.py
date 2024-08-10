@@ -13,6 +13,7 @@ import json
 import os
 import pandas as pd
 from typing import List, Dict
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
 
 import torch
@@ -32,7 +33,11 @@ class SolventModel(nn.Module):
     """
 
     def __init__(
-        self, input_size: int, hidden_layer_sizes: List[int], output_size: int, dropout_prob: float = 0.2
+        self,
+        input_size: int,
+        hidden_layer_sizes: List[int],
+        output_size: int,
+        dropout_prob: float = 0.2,
     ):
         super(SolventModel, self).__init__()
 
@@ -55,7 +60,7 @@ class SolventModel(nn.Module):
             if i < len(self.layers) - 1:
                 x = nn.functional.relu(x)
                 x = self.dropout(x)
-        return torch.sigmoid(x) # Classification probability
+        return torch.sigmoid(x)  # Classification probability
 
 
 # Pipeline class
@@ -93,6 +98,10 @@ class SolventModelPipeline:
         self.model_input_labels = self.normalize_labels(self.model_input_labels)
         self.test_labels = self.normalize_labels(self.test_labels)
 
+        # Scale features to standard normal: prevent numerically large features
+        # from dominating the predictions
+        self.standard_scale_features()
+
         # Device setup: use GPU if possible
         device: torch.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -115,12 +124,29 @@ class SolventModelPipeline:
             )
             torch.save(self.model, model_file_path)
             print("**Model saved**")
-    
+
     # Convert {-1, 1} labels to {0, 1} labels
-    def normalize_labels(self, raw_labels: pd.DataFrame): 
+    def normalize_labels(self, raw_labels: pd.DataFrame):
         normalized_labels: pd.DataFrame = raw_labels.copy()
-        normalized_labels[normalized_labels < 0] = 0 
+        normalized_labels[normalized_labels < 0] = 0
         return normalized_labels
+
+    # Scales to normal distribution and convert back to DataFrame
+    def standard_scale_features(self):
+        scalar = StandardScaler()
+        scalar.fit(self.model_input_features)
+        ndarray_model_input_features = scalar.transform(self.model_input_features)
+        ndarray_test_features = scalar.transform(
+            self.test_features
+        )  # Transform test features based on train view
+
+        # Convert back to DataFrame
+        self.model_input_features = pd.DataFrame(
+            ndarray_model_input_features, columns=self.model_input_features.columns
+        )
+        self.test_features = pd.DataFrame(
+            ndarray_test_features, columns=self.test_features.columns
+        )
 
     # Split data set into training and testing set
     def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
@@ -219,7 +245,7 @@ class SolventModelPipeline:
             self.model.eval()
             val_loss = 0
 
-            # Disable gradient calculations for validation: we don't need 
+            # Disable gradient calculations for validation: we don't need
             # to backpropagate and update weights in validation
             with torch.no_grad():
                 for X_batch, y_batch in val_loader:
@@ -268,7 +294,15 @@ if __name__ == "__main__":
     all_data_file_path: str = os.path.join(data_dir, data_file_name)
 
     # Read data: train on all features
-    removed_cols: List[str] = ["Unnamed: 0", "doi", "filename", "0", "CoRE_name", "refcode", "name"]
+    removed_cols: List[str] = [
+        "Unnamed: 0",
+        "doi",
+        "filename",
+        "0",
+        "CoRE_name",
+        "refcode",
+        "name",
+    ]
     df: pd.DataFrame = pd.read_csv(all_data_file_path)
     solvent_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
 
@@ -295,4 +329,6 @@ if __name__ == "__main__":
     print(f"**Model saved at {model_file_path}**")
     test_data_path = os.path.join(data_dir, "solvent_test_data.pkl")
     test_all.to_pickle(test_data_path)
+    print(test_all)
+    print(not any(test_all.isna()))
     print(f"**Test data saved at {test_data_path}**")
