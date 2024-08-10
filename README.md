@@ -8,22 +8,27 @@ OptiMOF is an algorithm package for metal-organic framework (MOF) screening & op
 
 ## Supported features
 
-1. Literature Mining: Utilizes NLP to process MOF literature and extract stability data.
-2. Feature Extraction: Automated feature extraction from [Crystallographic Information File](https://en.wikipedia.org/wiki/Crystallographic_Information_File).
-3. Machine Learning Models: Several artificial neural network (ANN) models were trained on geometric representations of MOFs found, and can be used to make predictions on MOFs' thermal and solvent stability.
-4. Prediction with Uncertainty: Provides stability predictions on new MOFs with quantified uncertainty.
+1. Feature Extraction: Automated feature extraction from [Crystallographic Information File](https://en.wikipedia.org/wiki/Crystallographic_Information_File).
+2. Machine Learning Models: Several artificial neural network (ANN) models were trained on chemical and geometric representations of MOFs found, and can be used to make predictions on MOFs' thermal breakdown temperature and solvent removal stability.
+3. Prediction with Uncertainty: Provides stability classification on new MOFs with quantified uncertainty.
 
 ## Usage
 
 ### Prerequisites
 
-To use and develop with OptiMOF, ensure that your environment meets the following requirements.
+To train OptiMOF on your own data set or use it for prediction:
 
-- Basic usage: `python < 3.8` due to compatibility issues. See [here](environment.yml) for a list of dependencies.
+- `python` version `3.6` or above
+- Libraries: `numpy`, `pandas`, `scikit-learn`, `scipy`, `PyTorch`
+- Optional: to run automated scripts, [Taskfile](https://taskfile.dev/installation/) version 3 is required to run the automation scripts.
+
+To conduct feature extraction:
+
+- `python < 3.8` due to compatibility issues. See [here](environment.yml) for a list of dependencies.
 - Feature extraction: `C++14` compiler and [GNU Make](https://www.gnu.org/software/make/) are required for compiling zeo++.
-- Run automated scripts: [Taskfile](https://taskfile.dev/installation/) version 3 is required to run the automation scripts.
+- Optional: to leverage parallel computing, a distributed memory system that supports [MPI](https://www.open-mpi.org/) is needed
 
-Make sure these tools and versions are properly installed and configured in your development environment to fully utilize the features and tests provided by this project.
+Make sure these tools and versions are properly installed and configured in your development environment to fully utilize the features and tests.
 
 ## Acknowledgements
 
