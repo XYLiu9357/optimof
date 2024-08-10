@@ -280,6 +280,4 @@ if __name__ == "__main__":
     print(f"**Model saved at {model_file_path}**")
     test_data_path = os.path.join(data_dir, "thermal_test_data.pkl")
     test_all.to_pickle(test_data_path)
-    print(test_all)
-    print(not any(test_all.isna()))
     print(f"**Test data saved at {test_data_path}**")

@@ -133,20 +133,30 @@ class SolventModelPipeline:
 
     # Scales to normal distribution and convert back to DataFrame
     def standard_scale_features(self):
+        # Instantiate the scaler
         scalar = StandardScaler()
-        scalar.fit(self.model_input_features)
-        ndarray_model_input_features = scalar.transform(self.model_input_features)
-        ndarray_test_features = scalar.transform(
-            self.test_features
-        )  # Transform test features based on train view
 
-        # Convert back to DataFrame
+        # Fit the scaler only on the training data
+        scalar.fit(self.model_input_features)
+
+        # Transform both training and test features using the scaler fitted on the training data
+        ndarray_model_input_features = scalar.transform(self.model_input_features)
+        ndarray_test_features = scalar.transform(self.test_features)
+
+        # Convert the scaled arrays back to DataFrames
         self.model_input_features = pd.DataFrame(
             ndarray_model_input_features, columns=self.model_input_features.columns
         )
         self.test_features = pd.DataFrame(
             ndarray_test_features, columns=self.test_features.columns
         )
+
+        # Check for NaN values
+        print(
+            "NaNs in scaled train features:",
+            self.model_input_features.isna().sum().sum(),
+        )
+        print("NaNs in scaled test features:", self.test_features.isna().sum().sum())
 
     # Split data set into training and testing set
     def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
