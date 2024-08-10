@@ -90,8 +90,8 @@ class SolventModelPipeline:
         self.train_test_split(all_df, test_size=0.2)
 
         # Normalize class labels to {0, 1}
-        self.model_input_labels = self.normalize(self.model_input_labels)
-        self.test_labels = self.normalize(self.test_labels)
+        self.model_input_labels = self.normalize_labels(self.model_input_labels)
+        self.test_labels = self.normalize_labels(self.test_labels)
 
         # Device setup: use GPU if possible
         device: torch.device = torch.device(
@@ -117,7 +117,7 @@ class SolventModelPipeline:
             print("**Model saved**")
     
     # Convert {-1, 1} labels to {0, 1} labels
-    def normalize(self, raw_labels: pd.DataFrame): 
+    def normalize_labels(self, raw_labels: pd.DataFrame): 
         normalized_labels: pd.DataFrame = raw_labels.copy()
         normalized_labels[normalized_labels < 0] = 0 
         return normalized_labels
@@ -271,8 +271,6 @@ if __name__ == "__main__":
     removed_cols: List[str] = ["Unnamed: 0", "doi", "filename", "0", "CoRE_name", "refcode", "name"]
     df: pd.DataFrame = pd.read_csv(all_data_file_path)
     solvent_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
-
-    print(solvent_all_df.head)
 
     # Read hyperparameters
     print("**Reading hyperparameter config**")
