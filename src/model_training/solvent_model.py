@@ -118,8 +118,8 @@ class SolventModelPipeline:
     
     # Convert {-1, 1} labels to {0, 1} labels
     def normalize(self, raw_labels: pd.DataFrame): 
-        normalized_labels: pd.DataFrame = raw_labels
-        normalized_labels[raw_labels.where(raw_labels < 0)] = 0
+        normalized_labels: pd.DataFrame = raw_labels.copy()
+        normalized_labels[normalized_labels < 0] = 0 
         return normalized_labels
 
     # Split data set into training and testing set
@@ -194,7 +194,7 @@ class SolventModelPipeline:
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
         # Loss function and optimizer
-        criterion = nn.MSELoss()
+        criterion = nn.BCEWithLogitsLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
 
         # Early stopping
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     all_data_file_path: str = os.path.join(data_dir, data_file_name)
 
     # Read data: train on all features
-    removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]
+    removed_cols: List[str] = ["Unnamed: 0", "doi", "filename", "0", "CoRE_name", "refcode", "name"]
     df: pd.DataFrame = pd.read_csv(all_data_file_path)
     solvent_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
 

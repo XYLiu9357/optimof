@@ -1,5 +1,5 @@
-"""test_utils.py
-Utility class for evaluating performance of the model. 
+"""regression_test_utils.py
+Utility class for evaluating performance of a regression model. 
 Requires a test set that was not used in training. 
 """
 
@@ -14,14 +14,13 @@ import scipy.stats as stats
 
 from thermal_model import ThermalModel
 
-class ModelPerformanceTest:
+class RegModelPerformanceTest:
 
     def __init__(
         self, model_file_path: str, test_features: pd.DataFrame, test_labels: pd.Series
     ):
         self.project_path = project_path
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(model_file_path)
 
         # Load the model
         self.model = torch.load(model_file_path, weights_only=False)
@@ -130,7 +129,7 @@ if __name__ == "__main__":
     test_features: pd.DataFrame = test_df.iloc[:, 1:]
 
     # Performance tests
-    performance_test = ModelPerformanceTest(model_file_path, test_features, test_labels)
+    performance_test = RegModelPerformanceTest(model_file_path, test_features, test_labels)
     save_dir = os.path.join(".", "performance", "thermal")
 
     performance_test.calculate_r2()
