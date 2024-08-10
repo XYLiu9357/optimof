@@ -37,7 +37,15 @@ tasks:
 
   test-thermal:
     cmds:
-      - python src/model_training/test_utils.py
+      - python src/model_training/regression_test_utils.py
+
+  train-solvent:
+    cmds:
+      - python src/model_training/solvent_model.py
+
+  test-solvent:
+    cmds:
+      - python src/model_training/biclass_test_utils.py
 
   # zeo++ library
   compile-zeo:
