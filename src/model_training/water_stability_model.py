@@ -11,6 +11,7 @@ import os
 import joblib
 import pandas as pd
 import numpy as np
+import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import (
@@ -35,6 +36,7 @@ class WaterStabilityRF:
         model: sklearn random forest model
         model_save_path: path to save model
         fig_save_dir: directory to save test figures
+        test_data_save_path: path to save test data
     """
 
     def __init__(
@@ -49,6 +51,9 @@ class WaterStabilityRF:
 
         self.model_save_path = os.path.join(project_dir, "model", "water_rf_model.pkl")
         self.fig_save_dir = os.path.join(project_dir, "performance", "water_rf")
+        self.test_data_save_path = os.path.join(
+            project_dir, "data", "water_and_haz", "water_rf_test_data.pkl"
+        )
 
     # Train the model and tune hyperparameters
     def model_train(self):
@@ -109,8 +114,10 @@ class WaterStabilityRF:
     def export_model(self):
         joblib.dump(self.model, self.model_save_path)
 
-    def get_test_data(self):
-        return [self.test_features, self.test_labels]
+    def save_test_data(self):
+        test_data = pd.concat([self.test_labels, self.test_features])
+        test_data.to_pickle(self.test_data_save_path)
+        print(f"Test data saved to: {self.test_data_save_path}")
 
 
 class WaterStabilityBoost:
@@ -125,6 +132,7 @@ class WaterStabilityBoost:
         model: xgboost tree model
         model_save_path: path to save model
         fig_save_dir: directory to save test figures
+        test_data_save_path: path to save test data
     """
 
     def __init__(
@@ -141,11 +149,33 @@ class WaterStabilityBoost:
             project_dir, "model", "water_boost_model.pkl"
         )
         self.fig_save_dir = os.path.join(project_dir, "performance", "water_boost")
+        self.test_data_save_path = os.path.join(
+            project_dir, "data", "water_and_haz", "water_boost_test_data.pkl"
+        )
 
     # Train the model and tune hyperparameters
     def model_train(self):
-        self.model = None
-        pass
+        model = xgb.XGBClassifier(objective="multi:softprob", random_state=0)
+
+        # Hyperparameter tuning
+        param_grid = {
+            "n_estimators": [100, 200, 300],
+            "max_depth": [3, 5, 7],
+            "learning_rate": [0.01, 0.1, 0.3],
+            "subsample": [0.8, 1.0],
+            "colsample_bytree": [0.8, 1.0],
+        }
+
+        grid_search = GridSearchCV(
+            estimator=model,
+            param_grid=param_grid,
+            cv=5,
+            scoring="accuracy",
+            n_jobs=-1,
+            verbose=2,
+        )
+        grid_search.fit(self.train_features, self.train_labels)
+        self.model = grid_search.best_estimator_
 
     # Run performance tests
     def run_perf_tests(self):
@@ -179,8 +209,10 @@ class WaterStabilityBoost:
     def export_model(self):
         joblib.dump(self.model, self.model_save_path)
 
-    def get_test_data(self):
-        return [self.test_features, self.test_labels]
+    def save_test_data(self):
+        test_data = pd.concat([self.test_labels, self.test_features])
+        test_data.to_pickle(self.test_data_save_path)
+        print(f"Test data saved to: {self.test_data_save_path}")
 
 
 if __name__ == "__main__":
@@ -204,9 +236,61 @@ if __name__ == "__main__":
     df_clean = df.loc[
         :, ~df.columns.isin(removed_cols) & ~df.columns.isin(other_labels)
     ]
+    normalized_labels = df_clean.iloc[:, 0] - 1  # Labels: {0, 1, 2, 3}
 
     # Random forest
-    rf_model = WaterStabilityRF(project_dir, df_clean.iloc[:, 1:], df_clean.iloc[:, 0])
+    print("**Training Random Forest Model")
+    rf_model = WaterStabilityRF(project_dir, df_clean.iloc[:, 1:], normalized_labels)
     rf_model.model_train()
     rf_model.export_model()
+
+    print("Random Forest Performance:")
     rf_model.run_perf_tests()
+    rf_model.save_test_data()
+    print("**End of Random Forest")
+
+    # Gradient-boosted model: not as good as RF
+    # print("**Training Boosted Tree Model")
+    # gb_model = WaterStabilityBoost(project_dir, df_clean.iloc[:, 1:], normalized_labels)
+    # gb_model.model_train()
+    # gb_model.export_model()
+
+    # print("Boosted Tree Performance:")
+    # gb_model.run_perf_tests()
+    # print("**End of Boosted Tree")
+
+"""
+Random Forest Performance:
+Accuracy: 0.6712
+ROC AUC Score: 0.8277
+
+Classification Report:
+               precision    recall  f1-score   support
+
+           0       0.75      0.35      0.48        17
+           1       0.66      0.65      0.65        68
+           2       0.68      0.82      0.74       112
+           3       0.56      0.23      0.32        22
+
+    accuracy                           0.67       219
+   macro avg       0.66      0.51      0.55       219
+weighted avg       0.67      0.67      0.65       219
+
+------------------------------------------------------------
+
+Boosted Tree Performance:
+Accuracy: 0.6347
+ROC AUC Score: 0.7959
+
+Classification Report:
+               precision    recall  f1-score   support
+
+           0       0.60      0.35      0.44        17
+           1       0.67      0.54      0.60        68
+           2       0.63      0.83      0.72       112
+           3       0.43      0.14      0.21        22
+
+    accuracy                           0.63       219
+   macro avg       0.58      0.47      0.49       219
+weighted avg       0.62      0.63      0.61       219
+"""
