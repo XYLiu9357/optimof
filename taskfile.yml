@@ -47,6 +47,14 @@ tasks:
     cmds:
       - python src/model_training/solvent_model_test.py
 
+  train-water:
+    cmds:
+      - python src/model_training/water_stability_model.py
+
+  test-water:
+    cmds:
+      - python src/model_training/water_stability_model_test.py
+
   # zeo++ library
   compile-zeo:
     cmds:
