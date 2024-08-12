@@ -12,6 +12,7 @@ import joblib
 import pandas as pd
 import numpy as np
 import xgboost as xgb
+import shap
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import label_binarize
@@ -64,7 +65,7 @@ class WaterStabilityRF:
 
         # Hyperparameter tuning
         param_grid = {
-            "n_estimators": [100, 200, 300],
+            "n_estimators": [100, 150, 200, 250, 300],
             "max_depth": [None, 10, 20],
             "min_samples_split": [2, 5, 10],
             "min_samples_leaf": [1, 2, 4],
@@ -116,36 +117,24 @@ class WaterStabilityRF:
         plt.figure(figsize=(8, 6))
         sns.set(style="whitegrid")
 
-        if len(self.test_labels.unique()) > 2:  # Multi-class case
-            # Binarize the labels for multi-class ROC
-            y_test_bin = label_binarize(self.test_labels, classes=self.model.classes_)
-            fpr = {}
-            tpr = {}
-            roc_auc = {}
+        # Binarize the labels for multi-class ROC
+        y_test_bin = label_binarize(self.test_labels, classes=self.model.classes_)
+        fpr = {}
+        tpr = {}
+        roc_auc = {}
 
-            for i in range(len(self.model.classes_)):
-                fpr[i], tpr[i], _ = roc_curve(
-                    y_test_bin[:, i], self.model.predict_proba(self.test_features)[:, i]
-                )
-                roc_auc[i] = auc(fpr[i], tpr[i])
-
-            for i in range(len(self.model.classes_)):
-                sns.lineplot(
-                    x=fpr[i],
-                    y=tpr[i],
-                    lw=2,
-                    label=f"Class {i} (AUC = {roc_auc[i]:.2f})",
-                )
-        else:  # Binary case
-            fpr, tpr, _ = roc_curve(
-                self.test_labels, self.model.predict_proba(self.test_features)[:, 1]
+        for i in range(len(self.model.classes_)):
+            fpr[i], tpr[i], _ = roc_curve(
+                y_test_bin[:, i], self.model.predict_proba(self.test_features)[:, i]
             )
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        for i in range(len(self.model.classes_)):
             sns.lineplot(
-                fpr,
-                tpr,
-                color="darkorange",
+                x=fpr[i],
+                y=tpr[i],
                 lw=2,
-                label=f"ROC curve (AUC = {roc_auc:.2f})",
+                label=f"Class {i} (AUC = {roc_auc[i]:.2f})",
             )
 
         sns.lineplot(x=[0, 1], y=[0, 1], color="navy", lw=2, linestyle="--")
@@ -157,6 +146,53 @@ class WaterStabilityRF:
         plt.legend(loc="lower right")
         plt.savefig(os.path.join(self.fig_save_dir, "roc_curve.png"))
         plt.close()
+
+        # # SHAP value distribution calculations
+        # explainer = shap.TreeExplainer(self.model)
+        # shap_values = explainer.shap_values(self.test_features)
+
+        # # If shap_values is a dictionary (for multi-class classification), extract keys
+        # if isinstance(shap_values, dict):
+        #     shap_values_dict = shap_values
+        # else:
+        #     # If it's a list (for binary classification or single class)
+        #     shap_values_dict = {i: val for i, val in enumerate(shap_values)}
+
+        # # Concatenate SHAP values and create DataFrame
+        # all_shap_values = []
+        # all_classes = []
+        # for class_idx, values in shap_values_dict.items():
+        #     if not isinstance(values, np.ndarray):
+        #         raise TypeError(
+        #             f"Expected SHAP values for class {class_idx} to be a numpy array."
+        #         )
+        #     all_shap_values.append(values)
+        #     all_classes.append(np.full(values.shape[0], fill_value=class_idx))
+
+        # shap_values_concat = np.concatenate(all_shap_values, axis=0)
+        # shap_values_df = pd.DataFrame(
+        #     shap_values_concat, columns=self.test_features.columns
+        # )
+        # shap_values_df["class"] = np.concatenate(all_classes)
+
+        # # SHAP summary plot
+        # plt.figure(figsize=(10, 6))
+        # shap_values_melted = shap_values_df.melt(
+        #     id_vars="class" if "class" in shap_values_df.columns else None,
+        #     var_name="Feature",
+        #     value_name="SHAP Value",
+        # )
+        # shap_palette = sns.color_palette(["#1f77b4", "#ff69b4"])
+        # sns.violinplot(
+        #     x="SHAP Value",
+        #     y="Feature",
+        #     data=shap_values_melted,
+        #     hue="class",
+        #     palette=shap_palette,
+        # )
+        # plt.title("SHAP Value Distribution")
+        # plt.savefig(os.path.join(self.fig_save_dir, "shap_value_distribution.png"))
+        # plt.close()
 
         return [accuracy, roc_auc]
 
@@ -209,7 +245,7 @@ class WaterStabilityBoost:
 
         # Hyperparameter tuning
         param_grid = {
-            "n_estimators": [100, 200, 300],
+            "n_estimators": [100, 150, 200, 250, 300],
             "max_depth": [3, 5, 7],
             "learning_rate": [0.01, 0.1, 0.3],
             "subsample": [0.8, 1.0],
@@ -341,10 +377,10 @@ if __name__ == "__main__":
     rf_model.model_train()
     rf_model.export_model()
 
-    print("Random Forest Performance:")
-    rf_model.run_perf_tests()
+    # print("Random Forest Performance:")
+    # rf_model.run_perf_tests()
     rf_model.save_test_data()
-    print("**End of Random Forest")
+    print("**End of Random Forest Trial")
 
     # Gradient-boosted model: not as good as RF
     # print("**Training Boosted Tree Model")
