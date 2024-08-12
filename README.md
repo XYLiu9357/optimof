@@ -32,7 +32,7 @@ Make sure these tools and versions are properly installed and configured in your
 
 ## Acknowledgements
 
-CoRE 2019 MOF database created by Bobbitt et al. is used to train the model, and the development process is supported by personnel from Snurr's Research Group @NorthwesternU. During the design & construction of this package, references were made to a deep learning pipeline developed by Nandy et al. and part of the source code was used in the feature extraction stage. The Zeo++ software package developed by Willems et al. is used to conduct geometry-based analysis on the CIF files, which is crucial to feature extraction.
+CoRE 2019 MOF database created by Bobbitt et al. is used to train the model, and the development process is supported by personnel from [Snurr's Research Group](https://zeolites.cqe.northwestern.edu/) @NorthwesternU. During the design & construction of this package, references were made to a deep learning pipeline developed by Nandy et al. and part of the source code was used in the feature extraction stage. The Zeo++ software package developed by Willems et al. is used to conduct geometry-based analysis on the CIF files, which is crucial to feature extraction.
 
 ## References
 
