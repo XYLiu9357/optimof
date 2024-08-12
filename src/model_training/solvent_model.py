@@ -60,7 +60,7 @@ class SolventModel(nn.Module):
             if i < len(self.layers) - 1:
                 x = nn.functional.relu(x)
                 x = self.dropout(x)
-        return torch.sigmoid(x)  # Classification probability
+        return x  # Debug note: use raw logits to avoid double activation
 
 
 # Pipeline class
