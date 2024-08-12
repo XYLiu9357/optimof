@@ -122,7 +122,6 @@ if __name__ == "__main__":
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
-    print(test_df)
     test_labels: pd.DataFrame = test_df.iloc[:, 0]
     test_features: pd.DataFrame = test_df.iloc[:, 1:]
 

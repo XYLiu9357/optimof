@@ -14,11 +14,14 @@ import numpy as np
 import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import label_binarize
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
     confusion_matrix,
     roc_auc_score,
+    roc_curve,
+    auc,
 )
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -107,12 +110,59 @@ class WaterStabilityRF:
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig(os.path.join(self.fig_save_dir, "confusion_matrix.png"))
+        plt.close()
+
+        # ROC Curve
+        plt.figure(figsize=(8, 6))
+        sns.set(style="whitegrid")
+
+        if len(self.test_labels.unique()) > 2:  # Multi-class case
+            # Binarize the labels for multi-class ROC
+            y_test_bin = label_binarize(self.test_labels, classes=self.model.classes_)
+            fpr = {}
+            tpr = {}
+            roc_auc = {}
+
+            for i in range(len(self.model.classes_)):
+                fpr[i], tpr[i], _ = roc_curve(
+                    y_test_bin[:, i], self.model.predict_proba(self.test_features)[:, i]
+                )
+                roc_auc[i] = auc(fpr[i], tpr[i])
+
+            for i in range(len(self.model.classes_)):
+                sns.lineplot(
+                    x=fpr[i],
+                    y=tpr[i],
+                    lw=2,
+                    label=f"Class {i} (AUC = {roc_auc[i]:.2f})",
+                )
+        else:  # Binary case
+            fpr, tpr, _ = roc_curve(
+                self.test_labels, self.model.predict_proba(self.test_features)[:, 1]
+            )
+            sns.lineplot(
+                fpr,
+                tpr,
+                color="darkorange",
+                lw=2,
+                label=f"ROC curve (AUC = {roc_auc:.2f})",
+            )
+
+        sns.lineplot(x=[0, 1], y=[0, 1], color="navy", lw=2, linestyle="--")
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("Receiver Operating Characteristic")
+        plt.legend(loc="lower right")
+        plt.savefig(os.path.join(self.fig_save_dir, "roc_curve.png"))
+        plt.close()
 
         return [accuracy, roc_auc]
 
     # Export model as joblib pickle
     def export_model(self):
-        joblib.dump(self.model, self.model_save_path)
+        joblib.dump(self, self.model_save_path)
 
     def save_test_data(self):
         test_data = pd.concat([self.test_labels, self.test_features])
@@ -202,12 +252,59 @@ class WaterStabilityBoost:
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.savefig(os.path.join(self.fig_save_dir, "confusion_matrix.png"))
+        plt.close()
+
+        # ROC Curve
+        plt.figure(figsize=(8, 6))
+        sns.set(style="whitegrid")
+
+        if len(self.test_labels.unique()) > 2:  # Multi-class case
+            # Binarize the labels for multi-class ROC
+            y_test_bin = label_binarize(self.test_labels, classes=self.model.classes_)
+            fpr = {}
+            tpr = {}
+            roc_auc = {}
+
+            for i in range(len(self.model.classes_)):
+                fpr[i], tpr[i], _ = roc_curve(
+                    y_test_bin[:, i], self.model.predict_proba(self.test_features)[:, i]
+                )
+                roc_auc[i] = auc(fpr[i], tpr[i])
+
+            for i in range(len(self.model.classes_)):
+                sns.lineplot(
+                    x=fpr[i],
+                    y=tpr[i],
+                    lw=2,
+                    label=f"Class {i} (AUC = {roc_auc[i]:.2f})",
+                )
+        else:  # Binary case
+            fpr, tpr, _ = roc_curve(
+                self.test_labels, self.model.predict_proba(self.test_features)[:, 1]
+            )
+            sns.lineplot(
+                fpr,
+                tpr,
+                color="darkorange",
+                lw=2,
+                label=f"ROC curve (AUC = {roc_auc:.2f})",
+            )
+
+        sns.lineplot(x=[0, 1], y=[0, 1], color="navy", lw=2, linestyle="--")
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("Receiver Operating Characteristic")
+        plt.legend(loc="lower right")
+        plt.savefig(os.path.join(self.fig_save_dir, "roc_curve.png"))
+        plt.close()
 
         return [accuracy, roc_auc]
 
     # Export model as joblib pickle
     def export_model(self):
-        joblib.dump(self.model, self.model_save_path)
+        joblib.dump(self, self.model_save_path)
 
     def save_test_data(self):
         test_data = pd.concat([self.test_labels, self.test_features])
