@@ -2,6 +2,7 @@
 .vscode
 temp_*
 CoRE2019
+*_model_*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
