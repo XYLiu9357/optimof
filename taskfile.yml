@@ -9,8 +9,8 @@ env:
 
 tasks:
   default:
-    - task: train-thermal
-    - task: test-thermal
+    cmds:
+      - task: run-client
 
   # Feature extraction
   extract-all:
@@ -55,6 +55,11 @@ tasks:
   test-water:
     cmds:
       - python src/model_training/water_stability_model_test.py
+
+  # MOF database for nearest neighbor query
+  run-client:
+    cmds:
+      - python -m src.mof_query
 
   # zeo++ library
   compile-zeo:
