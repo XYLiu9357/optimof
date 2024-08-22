@@ -8,6 +8,10 @@ env:
   DEBUG_FLAGS: -g -Wall -fsanitize=address
 
 tasks:
+  default:
+    - task: train-thermal
+    - task: test-thermal
+
   # Feature extraction
   extract-all:
     cmds:

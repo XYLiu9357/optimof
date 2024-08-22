@@ -14,6 +14,7 @@ import os
 import pandas as pd
 from typing import List, Dict
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
+from sklearn.preprocessing import StandardScaler
 
 import torch
 import torch.nn as nn
@@ -50,7 +51,7 @@ class ThermalModel(nn.Module):
             x = layer(x)
             # No ReLU at the last layer
             if i < len(self.layers) - 1:
-                x = nn.functional.relu(x)
+                x = nn.functional.leaky_relu(x)
         return x
 
 
@@ -85,6 +86,9 @@ class ThermalModelPipeline:
         self.hyperparams: Dict = hyperparams
         self.train_test_split(all_df, test_size=0.2)
 
+        # Scale features to normal distribution
+        self.standard_scale_features()
+
         # Device setup: use GPU if possible
         device: torch.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -108,10 +112,37 @@ class ThermalModelPipeline:
             torch.save(self.model, model_file_path)
             print("**Model saved**")
 
+    # Scales to normal distribution and convert back to DataFrame
+    def standard_scale_features(self):
+        # Instantiate the scaler
+        scalar = StandardScaler()
+
+        # Fit the scaler only on the training data
+        scalar.fit(self.model_input_features)
+
+        # Transform both training and test features using the scaler fitted on the training data
+        ndarray_model_input_features = scalar.transform(self.model_input_features)
+        ndarray_test_features = scalar.transform(self.test_features)
+
+        # Convert the scaled arrays back to DataFrames
+        self.model_input_features = pd.DataFrame(
+            ndarray_model_input_features, columns=self.model_input_features.columns
+        )
+        self.test_features = pd.DataFrame(
+            ndarray_test_features, columns=self.test_features.columns
+        )
+
+        # Check for NaN values
+        print(
+            "NaNs in scaled train features:",
+            self.model_input_features.isna().sum().sum(),
+        )
+        print("NaNs in scaled test features:", self.test_features.isna().sum().sum())
+
     # Split data set into training and testing set
     def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
-        all_features = all_df.iloc[:, 1:]
-        all_labels = all_df.iloc[:, 0]
+        all_features = all_df.loc[:, all_df.columns != "T"]
+        all_labels = all_df.loc[:, "T"]
         (
             self.model_input_features,
             self.test_features,
@@ -120,6 +151,10 @@ class ThermalModelPipeline:
         ) = sklearn_train_test_split(
             all_features, all_labels, test_size=test_size, random_state=0
         )
+
+        # Reset indices to ensure alignment
+        self.test_features = self.test_features.reset_index(drop=True)
+        self.test_labels = self.test_labels.reset_index(drop=True)
 
     # Build the model with the specified hyperparameters
     def model_build(self):
@@ -239,6 +274,10 @@ class ThermalModelPipeline:
 
     # Return test features and labels, for benchmarking
     def get_test_data(self):
+        has_nan_features = self.test_features.isna().any().any()
+        has_nan_labels = self.test_labels.isna().any().any()
+        print(f"Any NaN test features: {has_nan_features}")
+        print(f"Any NaN test labels: {has_nan_features}")
         return self.test_features, self.test_labels
 
 

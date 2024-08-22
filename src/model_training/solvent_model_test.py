@@ -38,6 +38,8 @@ class SolventModelPerfTest:
         self.test_features = torch.tensor(test_features.values, dtype=torch.float32).to(
             self.device
         )
+
+        # Test labels are already standard-scaled
         self.test_labels = (
             torch.tensor(test_labels.values, dtype=torch.float32)
             .unsqueeze(1)

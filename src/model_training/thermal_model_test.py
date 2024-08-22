@@ -124,15 +124,15 @@ if __name__ == "__main__":
 
     # Change these two lines to change the model tested
     test_data_path: str = os.path.join(data_dir, "thermal", "thermal_test_data.pkl")
-    # model_file_path: str = os.path.join(project_path, "model", "thermal_model.pkl")
-    model_file_path: str = os.path.join(
-        project_path, "model", "saved_models", "thermal_model_31rmse.pkl"
-    )
+    model_file_path: str = os.path.join(project_path, "model", "thermal_model.pkl")
+    # model_file_path: str = os.path.join(
+    #     project_path, "model", "saved_models", "thermal_model_31rmse.pkl"
+    # )
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
-    test_labels: pd.DataFrame = test_df.iloc[:, 0]
-    test_features: pd.DataFrame = test_df.iloc[:, 1:]
+    test_labels: pd.DataFrame = test_df.loc[:, "T"]
+    test_features: pd.DataFrame = test_df.loc[:, test_df.columns != "T"]
 
     # Performance tests
     performance_test = ThermalModelPerfTest(model_file_path, test_features, test_labels)
