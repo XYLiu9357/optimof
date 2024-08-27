@@ -115,14 +115,14 @@ class ThermalModelPipeline:
     # Scales to normal distribution and convert back to DataFrame
     def standard_scale_features(self):
         # Instantiate the scaler
-        scalar = StandardScaler()
+        self.scalar = StandardScaler()
 
         # Fit the scaler only on the training data
-        scalar.fit(self.model_input_features)
+        self.scalar.fit(self.model_input_features)
 
         # Transform both training and test features using the scaler fitted on the training data
-        ndarray_model_input_features = scalar.transform(self.model_input_features)
-        ndarray_test_features = scalar.transform(self.test_features)
+        ndarray_model_input_features = self.scalar.transform(self.model_input_features)
+        ndarray_test_features = self.scalar.transform(self.test_features)
 
         # Convert the scaled arrays back to DataFrames
         self.model_input_features = pd.DataFrame(
@@ -277,7 +277,7 @@ class ThermalModelPipeline:
         has_nan_features = self.test_features.isna().any().any()
         has_nan_labels = self.test_labels.isna().any().any()
         print(f"Any NaN test features: {has_nan_features}")
-        print(f"Any NaN test labels: {has_nan_features}")
+        print(f"Any NaN test labels: {has_nan_labels}")
         return self.test_features, self.test_labels
 
 

@@ -69,7 +69,10 @@ class MOFMap:
 
     def nearest_neighbor_query(self, query):
         dist, ind = self.kdtree.query(query, k=1)
-        return self.values[ind.flatten()]
+        exact_match = np.isclose(dist, 0)
+        if exact_match:
+            print("Exact match found for the given query")
+        return self.values[ind.flatten()], exact_match
 
     def import_from_file(self, file_path=None):
         if file_path is None:
