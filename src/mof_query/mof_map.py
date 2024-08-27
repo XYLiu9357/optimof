@@ -9,6 +9,7 @@ nearest neighbor query for processed MOFs.
 
 import os
 import numpy as np
+import pandas as pd
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.neighbors import KDTree
 import joblib
@@ -16,14 +17,36 @@ import joblib
 
 class MOFMap:
 
-    def __init__(self, dist_metric=euclidean_distances, project_path="."):
-        self.keys = None
-        self.values = None
-        self.kdtree = None
-
+    def __init__(
+        self,
+        mof_df=None,
+        dist_metric=euclidean_distances,
+        project_path=".",
+    ):
         self.import_file_path = os.path.join(project_path, "data", "mof-tree.pkl")
         self.export_filepath = os.path.join(project_path, "data", "mof-tree.pkl")
         self.dist_metric = dist_metric
+
+        if mof_df is None:
+            self.keys = None
+            self.values = None
+            self.kdtree = None
+            return
+
+        # Checks data integrity
+        feats = [
+            "thermal",
+            "solvent",
+            "water",
+        ]
+        assert isinstance(mof_df, pd.DataFrame)
+        assert "name" in mof_df.columns, f"MOFMap: missing labels"
+        assert all(col in mof_df.columns for col in feats), f"MOFMap: missing features"
+        assert not any(mof_df.isna()), "NaN values detected"
+
+        self.keys = mof_df.loc[:, feats]
+        self.values = mof_df.loc[:, "name"]
+        self.kdtree = KDTree(self.keys, metric=self.dist_metric)
 
     def insert(self, keys, y):
         if self.keys is None:
@@ -40,8 +63,6 @@ class MOFMap:
         if len(indices_to_remove) > 0:
             self.keys = np.delete(self.keys, indices_to_remove, axis=0)
             self.values = np.delete(self.values, indices_to_remove, axis=0)
-
-            # Rebuild the KDTree
             self.kdtree = KDTree(self.keys, metric=self.dist_metric)
         else:
             print(f"Warning: removal query for {value} has no matching target")
@@ -50,8 +71,12 @@ class MOFMap:
         dist, ind = self.kdtree.query(query, k=1)
         return self.values[ind.flatten()]
 
-    def import_from_file(self, file_path):
+    def import_from_file(self, file_path=None):
+        if file_path is None:
+            file_path = self.import_file_path
         self.keys, self.values, self.kdtree = joblib.load(file_path)
 
-    def export(self, file_path):
+    def export_to_file(self, file_path=None):
+        if file_path is None:
+            file_path = self.export_filepath
         joblib.dump((self.keys, self.values, self.kdtree), file_path)
