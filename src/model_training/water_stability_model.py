@@ -351,79 +351,84 @@ class WaterStabilityBoost:
 if __name__ == "__main__":
     project_dir = "."
     data_dir = os.path.join(project_dir, "data")
-    df = pd.read_csv(os.path.join(data_dir, "water_and_haz", "data.csv"))
+    solvent_data_path = os.path.join(data_dir, "water_and_haz", "water_split_data.pkl")
+    df_clean = joblib.load(solvent_data_path)
 
     # Data cleansing
-    removed_cols = [
-        "MOF_name",
-        "data_set",
-        "Unnamed: 0",
-        "doi",
-        "filename",
-        "0",
-        "CoRE_name",
-        "refcode",
-        "name",
-    ]
-    other_labels = ["acid_label", "base_label", "boiling_label"]
-    df_clean = df.loc[
-        :, ~df.columns.isin(removed_cols) & ~df.columns.isin(other_labels)
-    ]
-    normalized_labels = df_clean.iloc[:, 0] - 1  # Labels: {0, 1, 2, 3}
+    # removed_cols = [
+    #     "MOF_name",
+    #     "data_set",
+    #     "Unnamed: 0",
+    #     "doi",
+    #     "filename",
+    #     "0",
+    #     "CoRE_name",
+    #     "refcode",
+    #     "name",
+    # ]
+    # other_labels = ["acid_label", "base_label", "boiling_label"]
+    # df_clean = df.loc[
+    #     :, ~df.columns.isin(removed_cols) & ~df.columns.isin(other_labels)
+    # ]
+    normalized_labels = df_clean.loc[:, "water"] - 1  # Labels: {0, 1, 2, 3}
 
     # Random forest
     print("**Training Random Forest Model")
-    rf_model = WaterStabilityRF(project_dir, df_clean.iloc[:, 1:], normalized_labels)
+    rf_model = WaterStabilityRF(
+        project_dir, df_clean.loc[:, df_clean.columns != "water"], normalized_labels
+    )
     rf_model.model_train()
     rf_model.export_model()
 
-    # print("Random Forest Performance:")
-    # rf_model.run_perf_tests()
+    print("Random Forest Performance:")
+    rf_model.run_perf_tests()
     rf_model.save_test_data()
     print("**End of Random Forest Trial")
 
     # Gradient-boosted model: not as good as RF
-    # print("**Training Boosted Tree Model")
-    # gb_model = WaterStabilityBoost(project_dir, df_clean.iloc[:, 1:], normalized_labels)
-    # gb_model.model_train()
-    # gb_model.export_model()
+    print("**Training Boosted Tree Model")
+    gb_model = WaterStabilityBoost(
+        project_dir, df_clean.loc[:, df_clean.columns != "water"], normalized_labels
+    )
+    gb_model.model_train()
+    gb_model.export_model()
 
-    # print("Boosted Tree Performance:")
-    # gb_model.run_perf_tests()
-    # print("**End of Boosted Tree")
+    print("Boosted Tree Performance:")
+    gb_model.run_perf_tests()
+    print("**End of Boosted Tree")
 
 """
 Random Forest Performance:
-Accuracy: 0.6712
-ROC AUC Score: 0.8277
+Accuracy: 0.6621
+ROC AUC Score: 0.8400
 
 Classification Report:
                precision    recall  f1-score   support
 
-           0       0.75      0.35      0.48        17
-           1       0.66      0.65      0.65        68
-           2       0.68      0.82      0.74       112
-           3       0.56      0.23      0.32        22
+         0.0       0.80      0.48      0.60        25
+         1.0       0.63      0.68      0.65        65
+         2.0       0.72      0.77      0.74       115
+         3.0       0.00      0.00      0.00        14
 
-    accuracy                           0.67       219
-   macro avg       0.66      0.51      0.55       219
-weighted avg       0.67      0.67      0.65       219
+    accuracy                           0.66       219
+   macro avg       0.54      0.48      0.50       219
+weighted avg       0.65      0.66      0.65       219
 
-------------------------------------------------------------
+------
 
 Boosted Tree Performance:
-Accuracy: 0.6347
-ROC AUC Score: 0.7959
+Accuracy: 0.6758
+ROC AUC Score: 0.8492
 
 Classification Report:
                precision    recall  f1-score   support
 
-           0       0.60      0.35      0.44        17
-           1       0.67      0.54      0.60        68
-           2       0.63      0.83      0.72       112
-           3       0.43      0.14      0.21        22
+         0.0       0.67      0.56      0.61        25
+         1.0       0.64      0.68      0.66        65
+         2.0       0.74      0.77      0.76       115
+         3.0       0.11      0.07      0.09        14
 
-    accuracy                           0.63       219
-   macro avg       0.58      0.47      0.49       219
-weighted avg       0.62      0.63      0.61       219
+    accuracy                           0.68       219
+   macro avg       0.54      0.52      0.53       219
+weighted avg       0.66      0.68      0.67       219
 """

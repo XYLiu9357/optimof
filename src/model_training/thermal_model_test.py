@@ -131,8 +131,8 @@ if __name__ == "__main__":
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
-    test_labels: pd.DataFrame = test_df.loc[:, "T"]
-    test_features: pd.DataFrame = test_df.loc[:, test_df.columns != "T"]
+    test_labels: pd.DataFrame = test_df.loc[:, "thermal"]
+    test_features: pd.DataFrame = test_df.loc[:, test_df.columns != "thermal"]
 
     # Performance tests
     performance_test = ThermalModelPerfTest(model_file_path, test_features, test_labels)

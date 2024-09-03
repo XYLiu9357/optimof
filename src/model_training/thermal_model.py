@@ -9,8 +9,9 @@ Predictand: MOF breakdown temperature
 * The model only uses fully connected layers for simplification.
 """
 
-import json
 import os
+import joblib
+import json
 import pandas as pd
 from typing import List, Dict
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
@@ -141,8 +142,8 @@ class ThermalModelPipeline:
 
     # Split data set into training and testing set
     def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
-        all_features = all_df.loc[:, all_df.columns != "T"]
-        all_labels = all_df.loc[:, "T"]
+        all_features = all_df.loc[:, all_df.columns != "thermal"]
+        all_labels = all_df.loc[:, "thermal"]
         (
             self.model_input_features,
             self.test_features,
@@ -284,17 +285,14 @@ class ThermalModelPipeline:
 if __name__ == "__main__":
     # File configs
     project_path: str = "."
-    data_file_name: str = "thermal_all_data.csv"
     hyperparam_file_name = "thermal_hyperparams.json"
-
-    # Configure file path
     data_dir: str = os.path.join(project_path, "data", "thermal")
-    all_data_file_path: str = os.path.join(data_dir, data_file_name)
+    data_file_path = os.path.join(data_dir, "thermal_split_data.pkl")
 
     # Read data: train on all features
-    removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]
-    df: pd.DataFrame = pd.read_csv(all_data_file_path)
-    thermal_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
+    # removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]
+    thermal_all_df: pd.DataFrame = joblib.load(data_file_path)
+    # thermal_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
 
     # Read hyperparameters
     print("**Reading hyperparameter config**")

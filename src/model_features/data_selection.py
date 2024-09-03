@@ -14,17 +14,18 @@ def split_data(data_dir, all_in_one_data_path):
     can be used directly in training.
     """
     init_df = joblib.load(all_in_one_data_path)
+    init_df = init_df.set_index("name")
     labels = ["thermal", "solvent", "water"]
     for label in labels:
         # Extract
         valid_rows = init_df.loc[:, label].notna()
         prep_df = init_df.loc[valid_rows, :]
-        prep_df.set_index("name")
 
         # Remove unused label columns
         label_col = prep_df.pop(label)
-        prep_df = prep_df.iloc[:, [0]].join(prep_df.iloc[:, 3:])
-        prep_df.insert(1, label, label_col)
+        prep_df = prep_df.iloc[:, 2:]
+        prep_df = pd.concat([label_col, prep_df], axis=1)
+        print(prep_df)
 
         # Remove additional columns for water stability data
         if label == "water":
@@ -42,10 +43,14 @@ def split_data(data_dir, all_in_one_data_path):
                 "mc-I-0-all",
             ]
             prep_df = prep_df.drop(additional_drops, axis=1)
-
+            file_path = os.path.join(
+                data_dir, "water_and_haz", label + "_split_data.pkl"
+            )
+            joblib.dump(prep_df, file_path)
         # Save to file
-        file_path = os.path.join(data_dir, label + "_split_data.pkl")
-        joblib.dump(prep_df, file_path)
+        else:
+            file_path = os.path.join(data_dir, label, label + "_split_data.pkl")
+            joblib.dump(prep_df, file_path)
 
 
 def merge_data(thermal_data_path, solvent_data_path, water_data_path, saved_file_path):
@@ -144,9 +149,9 @@ if __name__ == "__main__":
         print(f"Warning: data exists at {all_pkl_path}")
 
     # Check data integrity
-    thermal_pkl_path = os.path.join(data_dir, "thermal_split_data.pkl")
-    solvent_pkl_path = os.path.join(data_dir, "solvent_split_data.pkl")
-    water_pkl_path = os.path.join(data_dir, "water_split_data.pkl")
+    thermal_pkl_path = os.path.join(data_dir, "thermal", "thermal_split_data.pkl")
+    solvent_pkl_path = os.path.join(data_dir, "solvent", "solvent_split_data.pkl")
+    water_pkl_path = os.path.join(data_dir, "water_and_haz", "water_split_data.pkl")
 
     thermal_df = joblib.load(thermal_pkl_path)
     solvent_df = joblib.load(solvent_pkl_path)

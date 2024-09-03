@@ -82,7 +82,7 @@ tasks:
     cmds:
       - rm -r temp_* || true
       - rm data/all_in_one.pkl || true
-      - rm data/*_split_data.pkl || true
+      - rm data/*/*_split_data.pkl || true
       - rm model/*.pkl || true
 
   clean-temp:

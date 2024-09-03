@@ -118,17 +118,12 @@ if __name__ == "__main__":
 
     # Change these two lines to change the model tested
     test_data_path: str = os.path.join(data_dir, "solvent", "solvent_test_data.pkl")
-    # model_file_path: str = os.path.join(
-    #     project_path, "model", "solvent_model.pkl"
-    # )
-    model_file_path: str = os.path.join(
-        project_path, "model", "saved_models", "solvent_model_78accuracy.pkl"
-    )
+    model_file_path: str = os.path.join(project_path, "model", "solvent_model.pkl")
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
-    test_labels: pd.DataFrame = test_df.iloc[:, 0]
-    test_features: pd.DataFrame = test_df.iloc[:, 1:]
+    test_labels: pd.DataFrame = test_df.loc[:, "solvent"]
+    test_features: pd.DataFrame = test_df.loc[:, test_df.columns != "solvent"]
 
     # Performance tests
     performance_test = SolventModelPerfTest(model_file_path, test_features, test_labels)
