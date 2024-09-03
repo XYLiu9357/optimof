@@ -1,6 +1,6 @@
 """__init__.py"""
 
-from ..model_features.data_selection import select_data
+from ..model_features.data_selection import merge_data
 
 from .thermal_model import ThermalModelPipeline
 from .thermal_model_test import ThermalModelPerfTest
