@@ -1,5 +1,7 @@
 """__init__.py"""
 
+from ..model_features.data_selection import select_data
+
 from .thermal_model import ThermalModelPipeline
 from .thermal_model_test import ThermalModelPerfTest
 from .solvent_model import SolventModelPipeline

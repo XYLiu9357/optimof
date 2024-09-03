@@ -77,3 +77,9 @@ tasks:
   clean-temp:
     cmds:
       - rm -r temp_* || true
+
+  clean-all:
+    cmds:
+      - rm -r temp_* || true
+      - rm data/all_in_one.pkl || true
+      - rm model/*.pkl || true
