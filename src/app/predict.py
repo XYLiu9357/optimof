@@ -61,7 +61,9 @@ def sigmoid(logits: np.ndarray):
 
 
 # Extract features from file and fix formatting
-def extract_from_file(project_path, target_path, id=current_time()) -> pd.DataFrame:
+def extract_from_file(
+    project_path: str, target_path: str, id=current_time()
+) -> pd.DataFrame:
     extracted_df = extract_features(project_path, target_path, id)
     extracted_df.loc[:, "name"] = id
     all_cols = joblib.load(os.path.join(project_path, "data", "all_in_one_cols.pkl"))
@@ -75,7 +77,7 @@ def extract_from_file(project_path, target_path, id=current_time()) -> pd.DataFr
 
 
 # Run ANN model on the given input. Thermal and solvent model share this procedure.
-def pred_ann(model_path, scalar_path, input_df: pd.DataFrame):
+def pred_ann(model_path: str, scalar_path: str, input_df: pd.DataFrame):
     # Standard scale data
     scalar: StandardScaler = joblib.load(scalar_path)
     scaled_df = scalar.transform(input_df)
@@ -95,7 +97,7 @@ def pred_ann(model_path, scalar_path, input_df: pd.DataFrame):
     return pred
 
 
-def pred_water(model_path, input_df: pd.DataFrame) -> bool:
+def pred_water(model_path: str, input_df: pd.DataFrame) -> bool:
     model_obj = joblib.load(model_path)
     model: RandomForestClassifier = model_obj.model
 
@@ -121,7 +123,7 @@ def pred_water(model_path, input_df: pd.DataFrame) -> bool:
 
 
 # Make predictions based on input dataframe
-def predict_df(project_path, feature_df: pd.DataFrame):
+def predict_df(project_path: str, feature_df: pd.DataFrame):
     model_dir = os.path.join(project_path, "model")
     scalar_dir = os.path.join(model_dir, "preprocess")
 

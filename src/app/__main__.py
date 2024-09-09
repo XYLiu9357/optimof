@@ -27,5 +27,6 @@ data_dir = os.path.join(project_path, "data")
 data_pkl_path = os.path.join(data_dir, "all_in_one.pkl")
 df_all = joblib.load(data_pkl_path)
 
-target_path = os.path.join(project_path, "test", "ABAVIJ_clean.cif")
+target_name = "ACAJIY_clean.cif"  # 1499489-acs.cgd.6b01265_1499490_clean.cif
+target_path = os.path.join(project_path, "test", target_name)
 predict_from_file(project_path, target_path)
