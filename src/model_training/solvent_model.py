@@ -101,7 +101,9 @@ class SolventModelPipeline:
 
         # Scale features to standard normal: prevent numerically large features
         # from dominating the predictions
-        self.standard_scale_features()
+        self.fit_scalar()
+        self.model_input_features = self.data_transform(self.model_input_features)
+        self.test_features = self.data_transform(self.test_features)
 
         # Device setup: use GPU if possible
         device: torch.device = torch.device(
@@ -132,32 +134,21 @@ class SolventModelPipeline:
         normalized_labels[normalized_labels < 0] = 0
         return normalized_labels
 
-    # Scales to normal distribution and convert back to DataFrame
-    def standard_scale_features(self):
-        # Instantiate the scaler
+    # Fit the scalar to the training set
+    def fit_scalar(self):
         self.scalar = StandardScaler()
-
-        # Fit the scaler only on the training data
         self.scalar.fit(self.model_input_features)
 
-        # Transform both training and test features using the scaler fitted on the training data
-        ndarray_model_input_features = self.scalar.transform(self.model_input_features)
-        ndarray_test_features = self.scalar.transform(self.test_features)
+        # Save scalar
+        scalar_file_path = os.path.join(
+            self.project_path, "model", "preprocess", "solvent_scalar.pkl"
+        )
+        joblib.dump(self.scalar, scalar_file_path)
 
-        # Convert the scaled arrays back to DataFrames
-        self.model_input_features = pd.DataFrame(
-            ndarray_model_input_features, columns=self.model_input_features.columns
-        )
-        self.test_features = pd.DataFrame(
-            ndarray_test_features, columns=self.test_features.columns
-        )
-
-        # Check for NaN values
-        print(
-            "NaNs in scaled train features:",
-            self.model_input_features.isna().sum().sum(),
-        )
-        print("NaNs in scaled test features:", self.test_features.isna().sum().sum())
+    # Transform input data
+    def data_transform(self, input_df):
+        ndarray_output = self.scalar.transform(input_df)
+        return pd.DataFrame(ndarray_output, columns=input_df.columns)
 
     # Split data set into training and testing set
     def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):

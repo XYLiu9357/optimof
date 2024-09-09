@@ -63,7 +63,7 @@ tasks:
   # MOF database for nearest neighbor query
   run-client:
     cmds:
-      - python -m src.mof_query
+      - python -m src.app
 
   # zeo++ library
   compile-zeo:
@@ -84,6 +84,7 @@ tasks:
       - rm data/all_in_one.pkl || true
       - rm data/*/*_split_data.pkl || true
       - rm model/*.pkl || true
+      - rm model/preprocess/*.pkl || true
 
   clean-temp:
     cmds:

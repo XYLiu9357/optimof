@@ -25,7 +25,6 @@ def split_data(data_dir, all_in_one_data_path):
         label_col = prep_df.pop(label)
         prep_df = prep_df.iloc[:, 2:]
         prep_df = pd.concat([label_col, prep_df], axis=1)
-        print(prep_df)
 
         # Remove additional columns for water stability data
         if label == "water":
