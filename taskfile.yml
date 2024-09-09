@@ -11,6 +11,8 @@ tasks:
   default:
     cmds:
       - task: select-data
+      - task: train-thermal
+      - task: train-solvent
 
   # Feature extraction
   extract-all:
@@ -82,6 +84,7 @@ tasks:
     cmds:
       - rm -r temp_* || true
       - rm data/all_in_one.pkl || true
+      - rm data/all_in_one_cols.pkl || true
       - rm data/*/*_split_data.pkl || true
       - rm model/*.pkl || true
       - rm model/preprocess/*.pkl || true

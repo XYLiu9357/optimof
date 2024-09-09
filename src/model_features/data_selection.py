@@ -52,7 +52,13 @@ def split_data(data_dir, all_in_one_data_path):
             joblib.dump(prep_df, file_path)
 
 
-def merge_data(thermal_data_path, solvent_data_path, water_data_path, saved_file_path):
+def merge_data(
+    thermal_data_path,
+    solvent_data_path,
+    water_data_path,
+    saved_file_path,
+    saved_cols_path,
+):
     """merge_data
     Merge the data used for model training
     1. Extracts solvent, thermal, and water stability data.
@@ -127,6 +133,7 @@ def merge_data(thermal_data_path, solvent_data_path, water_data_path, saved_file
     print(f"NaN count (merged): {merged_df.isna().sum().sum()}")
 
     # Save
+    joblib.dump(merged_df.columns, saved_cols_path)
     joblib.dump(merged_df, saved_file_path)
     print(f"File saved to {saved_file_path}")
 
@@ -135,17 +142,18 @@ if __name__ == "__main__":
     print("**Data Selection**")
     project_path = "."
     data_dir = os.path.join(project_path, "data")
-    all_pkl_path = os.path.join(data_dir, "all_in_one.pkl")
+    all_in_one_pkl = os.path.join(data_dir, "all_in_one.pkl")
+    all_cols_pkl = os.path.join(data_dir, "all_in_one_cols.pkl")
 
     # Reorganize data
-    if not os.path.isfile(all_pkl_path):
+    if not os.path.isfile(all_in_one_pkl):
         thermal_path = os.path.join(data_dir, "thermal", "thermal_all_data.csv")
         solvent_path = os.path.join(data_dir, "solvent", "solvent_all_data.csv")
         water_path = os.path.join(data_dir, "water_and_haz", "data.csv")
-        merge_data(thermal_path, solvent_path, water_path, all_pkl_path)
-        split_data(data_dir, all_pkl_path)
+        merge_data(thermal_path, solvent_path, water_path, all_in_one_pkl, all_cols_pkl)
+        split_data(data_dir, all_in_one_pkl)
     else:
-        print(f"Warning: data exists at {all_pkl_path}")
+        print(f"Warning: data exists at {all_in_one_pkl}")
 
     # Check data integrity
     thermal_pkl_path = os.path.join(data_dir, "thermal", "thermal_split_data.pkl")

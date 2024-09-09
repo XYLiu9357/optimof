@@ -281,7 +281,7 @@ if __name__ == "__main__":
         target_path = os.path.join(project_path, target)
 
     # Generate descriptors
-    result = extract_features(project_path, target_path, "thermal", id=target)
+    result = extract_features(project_path, target_path, id=target)
     if result.empty:
         print("generate_descriptors exit due to failure")
         exit(1)
