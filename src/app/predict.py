@@ -1,5 +1,7 @@
 """predict.py
-Runs all models over a collection of CIF files.
+Runs the models over a set of input features. Fills unknown labels
+by prediction in the all-in-one data set.
+
 1. Call extract_features to extract feature dataframe
 2. Preprocess feature dataframe: formatting & feature engineering
 3. Feed data through each model
@@ -13,10 +15,17 @@ import pandas as pd
 from datetime import datetime
 
 import torch
+import xgboost
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+
 from src.model_features import extract_features
 from src.model_training.thermal_model import ThermalModel
 from src.model_training.solvent_model import SolventModel
+from src.model_training.water_stability_model import (
+    WaterStabilityRF,
+    WaterStabilityBoost,
+)
 
 
 # Get current date and time as a string
@@ -45,9 +54,10 @@ def sigmoid(logits: np.ndarray):
     positive = logits >= 0
     negative = ~positive
 
-    result = np.empty_like(logits, dtype=np.float)
-    result[positive] = _positive_sigmoid(logits[positive])
-    result[negative] = _negative_sigmoid(logits[negative])
+    probs = np.empty_like(logits, dtype=np.float32)
+    probs[positive] = _positive_sigmoid(logits[positive])
+    probs[negative] = _negative_sigmoid(logits[negative])
+    return probs
 
 
 # Extract features from file and fix formatting
@@ -86,7 +96,28 @@ def pred_ann(model_path, scalar_path, input_df: pd.DataFrame):
 
 
 def pred_water(model_path, input_df: pd.DataFrame) -> bool:
-    pass
+    model_obj = joblib.load(model_path)
+    model: RandomForestClassifier = model_obj.model
+
+    # Drop additional columns
+    water_additional_drops = [
+        "D_lc-I-0-all",
+        "D_lc-I-1-all",
+        "D_lc-I-2-all",
+        "D_lc-I-3-all",
+        "D_lc-S-0-all",
+        "D_mc-Z-0-all",
+        "POAV",
+        "PONAV",
+        "cell_v",
+        "lc-I-0-all",
+        "mc-I-0-all",
+    ]
+    clean_water_df = input_df.drop(water_additional_drops, axis=1)
+
+    # Make prediction
+    probs = model.predict_proba(clean_water_df)
+    return probs
 
 
 # Make predictions based on input dataframe
@@ -107,11 +138,10 @@ def predict_df(project_path, feature_df: pd.DataFrame):
     solvent_flags = sigmoid(solvent_logits)
     print(f"Solvent model prediction successful: {solvent_flags}")
 
-    # # Water stability model
-    # water_model_path = os.path.join(model_dir, "water_model.pkl")
-    # water_scalar_path = os.path.join(scalar_dir, "water_scalar.pkl")
-    # water_flag = pred_water(water_model_path, water_scalar_path, feature_df)
-    # print(f"Water stability model prediction successful: {water_flag}")
+    # Water stability model
+    water_model_path = os.path.join(model_dir, "water_rf_model.pkl")
+    water_flag = pred_water(water_model_path, feature_df)
+    print(f"Water stability model prediction successful: {water_flag}")
     return temperature, solvent_flags
 
 
@@ -123,3 +153,6 @@ def predict_from_file(project_path: str, target_path: str) -> pd.DataFrame:
     print("Feature extraction successful")
     predict_df(project_path, feature_df)
     print("**Prediction complete**")
+
+
+# Fill unknown labels in the all-in-one dataset

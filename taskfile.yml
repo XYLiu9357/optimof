@@ -13,6 +13,8 @@ tasks:
       - task: select-data
       - task: train-thermal
       - task: train-solvent
+      # - task: train-water
+      - task: run-client
 
   # Feature extraction
   extract-all:

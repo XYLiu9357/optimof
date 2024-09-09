@@ -28,7 +28,7 @@ def split_data(data_dir, all_in_one_data_path):
 
         # Remove additional columns for water stability data
         if label == "water":
-            additional_drops = [
+            water_additional_drops = [
                 "D_lc-I-0-all",
                 "D_lc-I-1-all",
                 "D_lc-I-2-all",
@@ -41,7 +41,7 @@ def split_data(data_dir, all_in_one_data_path):
                 "lc-I-0-all",
                 "mc-I-0-all",
             ]
-            prep_df = prep_df.drop(additional_drops, axis=1)
+            prep_df = prep_df.drop(water_additional_drops, axis=1)
             file_path = os.path.join(
                 data_dir, "water_and_haz", label + "_split_data.pkl"
             )

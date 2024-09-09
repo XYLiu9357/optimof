@@ -8,10 +8,19 @@ import os
 import joblib
 import pandas as pd
 
-from src.app.predict import predict_from_file
-from src.app.mof_map import MOFMap
+import torch
+import xgboost
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+
+from .predict import predict_df, predict_from_file
+from src.model_features import extract_features
 from src.model_training.thermal_model import ThermalModel
 from src.model_training.solvent_model import SolventModel
+from src.model_training.water_stability_model import (
+    WaterStabilityRF,
+    WaterStabilityBoost,
+)
 
 project_path = "."
 data_dir = os.path.join(project_path, "data")

@@ -385,17 +385,17 @@ if __name__ == "__main__":
     rf_model.save_test_data()
     print("**End of Random Forest Trial")
 
-    # Gradient-boosted model: not as good as RF
-    print("**Training Boosted Tree Model")
-    gb_model = WaterStabilityBoost(
-        project_dir, df_clean.loc[:, df_clean.columns != "water"], normalized_labels
-    )
-    gb_model.model_train()
-    gb_model.export_model()
+    # # Gradient-boosted model: not as good as RF
+    # print("**Training Boosted Tree Model")
+    # gb_model = WaterStabilityBoost(
+    #     project_dir, df_clean.loc[:, df_clean.columns != "water"], normalized_labels
+    # )
+    # gb_model.model_train()
+    # gb_model.export_model()
 
-    print("Boosted Tree Performance:")
-    gb_model.run_perf_tests()
-    print("**End of Boosted Tree")
+    # print("Boosted Tree Performance:")
+    # gb_model.run_perf_tests()
+    # print("**End of Boosted Tree")
 
 """
 Random Forest Performance:
