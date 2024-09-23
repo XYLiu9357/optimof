@@ -144,7 +144,7 @@ def predict_df(project_path: str, feature_df: pd.DataFrame):
     water_model_path = os.path.join(model_dir, "water_rf_model.pkl")
     water_flag = pred_water(water_model_path, feature_df)
     print(f"Water stability model prediction successful: {water_flag}")
-    return temperature, solvent_flags
+    return temperature, solvent_flags, water_flag
 
 
 # Make predictions based on CIF file

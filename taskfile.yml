@@ -10,10 +10,6 @@ env:
 tasks:
   default:
     cmds:
-      - task: select-data
-      - task: train-thermal
-      - task: train-solvent
-      - task: train-water
       - task: run-client
 
   # Feature extraction
@@ -67,7 +63,7 @@ tasks:
   # MOF database for nearest neighbor query
   run-client:
     cmds:
-      - python -m src.app
+      - python -m app
 
   # zeo++ library
   compile-zeo:
