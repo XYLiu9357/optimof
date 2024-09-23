@@ -63,7 +63,7 @@ tasks:
   # MOF database for nearest neighbor query
   run-client:
     cmds:
-      - python -m app
+      - python -m app {{.CLI_ARGS}}
 
   # zeo++ library
   compile-zeo:

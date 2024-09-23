@@ -10,7 +10,6 @@ nearest neighbor query for processed MOFs.
 import os
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.neighbors import KDTree
 import joblib
 
@@ -20,7 +19,7 @@ class MOFMap:
     def __init__(
         self,
         mof_df=None,
-        dist_metric=euclidean_distances,
+        dist_metric="euclidean",
         project_path=".",
     ):
         self.import_file_path = os.path.join(project_path, "data", "mof-tree.pkl")
@@ -42,7 +41,7 @@ class MOFMap:
         assert isinstance(mof_df, pd.DataFrame)
         assert "name" in mof_df.columns, f"MOFMap: missing labels"
         assert all(col in mof_df.columns for col in feats), f"MOFMap: missing features"
-        assert not any(mof_df.isna()), "NaN values detected"
+        assert not mof_df.isna().any().any(), "MOFMap: NaN values detected"
 
         self.keys = mof_df.loc[:, feats]
         self.values = mof_df.loc[:, "name"]
@@ -67,12 +66,12 @@ class MOFMap:
         else:
             print(f"Warning: removal query for {value} has no matching target")
 
-    def nearest_neighbor_query(self, query):
+    def nearest_neighbor_query(self, query: np.ndarray[np.float32]):
         dist, ind = self.kdtree.query(query, k=1)
         exact_match = np.isclose(dist, 0)
         if exact_match:
             print("Exact match found for the given query")
-        return self.values[ind.flatten()], exact_match
+        return self.values[ind.flatten()].values, exact_match
 
     def import_from_file(self, file_path=None):
         if file_path is None:
