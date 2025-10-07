@@ -21,7 +21,7 @@ help:
 	@echo "    mpi-extract-all    - Extract features using MPI parallelization"
 	@echo "    extract-feature    - Extract single feature (use ARGS for arguments)"
 	@echo "    check-features     - Check extracted features"
-	@echo "    select-data        - Run data selection"
+	@echo "    preprocess         - Run data preprocessing"
 	@echo ""
 	@echo "  Model Training:"
 	@echo "    train-thermal      - Train thermal stability model"
@@ -70,9 +70,9 @@ extract-feature:
 check-features:
 	python -m data.check_features
 
-.PHONY: select-data
-select-data:
-	python -m src.model_features.data_selection
+.PHONY: preprocess
+preprocess:
+	python -m src.model_features.preprocess
 
 # Model training
 .PHONY: train-thermal
