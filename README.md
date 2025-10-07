@@ -2,6 +2,8 @@
 
 OptiMOF - Metal organic framework screening & optimization powered by deep learning.
 
+Don't forget to run `task select-data` before running any other tasks.
+
 ## Overview
 
 OptiMOF is an algorithm package for metal-organic framework (MOF) screening & optimization, powered by deep learning. This tool provides a comprehensive workflow tha includes mining and analyzing MOF literature, extracting critical features, predicting MOF stability based on crystallographic information files (CIFs).

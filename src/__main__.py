@@ -15,7 +15,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 
-
+from datetime import datetime
 import torch
 import xgboost
 from sklearn.preprocessing import StandardScaler
@@ -41,6 +41,20 @@ data_dir = os.path.join(project_path, "data")
 data_pkl_path = os.path.join(data_dir, "all_in_one.pkl")
 mof_map_file_path = os.path.join(data_dir, "mof_map.pkl")
 df_all = joblib.load(data_pkl_path)
+
+
+# Get current date and time as a string
+def current_time():
+    currentDateAndTime = datetime.now()
+    year = currentDateAndTime.year
+    month = currentDateAndTime.month
+    day = currentDateAndTime.day
+    hour = currentDateAndTime.hour
+    minute = currentDateAndTime.minute
+    second = currentDateAndTime.second
+
+    date_str = f"{year}-{month}-{day}_{hour}-{minute}-{second}"
+    return date_str
 
 
 def helper_predict_cif(target_file: str):
@@ -91,6 +105,35 @@ def helper_build_mof_map(filled_data_path: str):
     mof_map.export_to_file(mof_map_file_path)
 
 
+def pred_multiple(all_files, num_cifs=None):
+    counter = 0
+    output_df = pd.DataFrame(columns=["filename", "thermal", "solvent", "water"])
+    for file in all_files:
+        if (
+            num_cifs is not None and counter >= num_cifs
+        ):  # Set maximum number of cifs to process
+            break
+        file_name = os.fsdecode(file)
+        if file_name.endswith(".cif"):
+            file_path = os.path.join(target_directory, file_name)
+            tempeartures, solvent_flags, water_flags = list(
+                helper_predict_cif(file_path)
+            )
+            cur_file_df = pd.DataFrame(
+                {
+                    "filename": file_name,
+                    "thermal": tempeartures[0],
+                    "solvent": solvent_flags[0],
+                    "water": np.argmax(water_flags),
+                }
+            )
+            output_df = pd.concat([output_df, cur_file_df])
+        else:
+            print(f"Warning: skipping over non-cif file {file_name}")
+        counter += 1
+    return output_df
+
+
 # Run app client
 def run():
     print("**Running Flask client")
@@ -117,13 +160,12 @@ elif len(sys.argv) == 3:
         if not os.path.isdir(target_directory):
             print(f"**Error: {target_directory} is not a valid directory")
             exit(1)
-        for file in os.listdir(target_directory):
-            file_name = os.fsdecode(file)
-            if file_name.endswith(".cif"):
-                file_path = os.path.join(target_directory, file_name)
-                helper_predict_cif(file_path)
-            else:
-                print(f"Warning: skipping over non-cif file {file_name}")
+        output_df = pd.DataFrame(columns=["filename", "thermal", "solvent", "water"])
+        all_files = os.listdir(target_directory)
+        all_files.sort()
+        output_df = pred_multiple(all_files)
+        output_df.to_csv(os.path.join(project_path, f"{current_time()}_results.csv"))
+        print(output_df)
     # Build MOF map data base
     elif sys.argv[1] == "-b" or sys.argv[1] == "--build-db":
         filled_data_path = sys.argv[2]
@@ -133,5 +175,17 @@ elif len(sys.argv) == 3:
         helper_build_mof_map(filled_data_path)
     else:
         print("Module called with unknown argument format")
+elif len(sys.argv) == 4:
+    if sys.argv[1] == "-p" or sys.argv[1] == "--predict":
+        target_directory = sys.argv[2]
+        if not os.path.isdir(target_directory):
+            print(f"**Error: {target_directory} is not a valid directory")
+            exit(1)
+        num_cifs = int(sys.argv[3])
+        all_files = os.listdir(target_directory)
+        all_files.sort()
+        output_df = pred_multiple(all_files, num_cifs)
+        output_df.to_csv(os.path.join(project_path, f"{current_time()}_results.csv"))
+        # print(output_df)
 else:
     print("Module called with unknown argument format")

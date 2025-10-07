@@ -10,14 +10,16 @@ dependencies:
   - _py-xgboost-mutex=2.0=cpu_0
   - absl-py=2.1.0=pyhd8ed1ab_0
   - alsa-lib=1.2.12=h4ab18f5_0
+  - asgiref=3.8.1=py312h06a4308_0
   - astunparse=1.6.3=pyhd8ed1ab_0
   - attr=2.5.1=h166bdaf_1
   - blas=1.0=mkl
+  - blinker=1.6.2=py312h06a4308_0
   - brotli=1.0.9=he6710b0_2
   - brotli-python=1.1.0=py312h2ec8cdc_2
   - bzip2=1.0.8=h4bc722e_7
   - c-ares=1.33.1=heb4867d_0
-  - ca-certificates=2024.8.30=hbcca054_0
+  - ca-certificates=2024.9.24=h06a4308_0
   - cached-property=1.5.2=hd8ed1ab_1
   - cached_property=1.5.2=pyha770c72_1
   - cairo=1.16.0=hb05425b_5
@@ -25,6 +27,7 @@ dependencies:
   - cffi=1.17.1=py312h06ac9bb_0
   - cfgv=3.3.1=pyhd8ed1ab_0
   - charset-normalizer=3.3.2=pyhd8ed1ab_0
+  - click=8.1.7=py312h06a4308_0
   - cloudpickle=3.0.0=pyhd8ed1ab_0
   - colorama=0.4.6=pyhd8ed1ab_0
   - contourpy=1.2.0=py312hdb19cb5_0
@@ -44,8 +47,10 @@ dependencies:
   - cycler=0.11.0=pyhd3eb1b0_0
   - dbus=1.13.18=hb2f20db_0
   - distlib=0.3.8=pyhd8ed1ab_0
+  - django=5.1=py312h06a4308_0
   - expat=2.6.3=h5888daf_0
   - filelock=3.16.0=pyhd8ed1ab_0
+  - flask=3.0.3=py312h06a4308_0
   - flatbuffers=24.3.25=h59595ed_0
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
   - font-ttf-inconsolata=3.000=h77eed37_0
@@ -82,6 +87,7 @@ dependencies:
   - importlib-resources=6.4.4=pyhd8ed1ab_0
   - importlib_resources=6.4.4=pyhd8ed1ab_0
   - intel-openmp=2022.0.1=h06a4308_3633
+  - itsdangerous=2.2.0=py312h06a4308_0
   - jinja2=3.1.4=py312h06a4308_0
   - joblib=1.4.2=pyhd8ed1ab_0
   - keras=3.5.0=pyhd8ed1ab_1
@@ -236,6 +242,7 @@ dependencies:
   - six=1.16.0=pyh6c4a22f_0
   - slicer=0.0.7=pyhd3eb1b0_0
   - snappy=1.2.1=ha2e4443_0
+  - sqlparse=0.4.4=py312h06a4308_0
   - sympy=1.13.2=py312h06a4308_0
   - tensorboard=2.16.2=pyhd8ed1ab_0
   - tensorboard-data-server=0.7.0=py312h241aef2_1
