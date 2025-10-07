@@ -1,36 +1,63 @@
 # OptiMOF
 
-OptiMOF - Metal organic framework screening & optimization powered by deep learning.
-
-Don't forget to run `task select-data` before running any other tasks.
+**Metal-Organic Framework screening and stability prediction powered by machine learning.**
 
 ## Overview
 
-OptiMOF is an algorithm package for metal-organic framework (MOF) screening & optimization, powered by deep learning. This tool provides a comprehensive workflow tha includes mining and analyzing MOF literature, extracting critical features, predicting MOF stability based on crystallographic information files (CIFs).
+OptiMOF is a comprehensive machine learning pipeline for predicting the stability properties of metal-organic frameworks (MOFs) from crystallographic information files (CIFs). The project combines geometric feature extraction with multiple predictive models to assess:
 
-## Supported features
+- **Thermal Stability**: Predicts MOF breakdown temperature using artificial neural networks (PyTorch)
+- **Solvent Removal Stability**: Binary classification of MOF stability upon solvent removal (PyTorch)
+- **Water Stability**: Multi-class classification of MOF stability in aqueous environments (Random Forest/XGBoost)
 
-1. Feature Extraction: Automated feature extraction from [Crystallographic Information File](https://en.wikipedia.org/wiki/Crystallographic_Information_File).
-2. Machine Learning Models: Several artificial neural network (ANN) models were trained on chemical and geometric representations of MOFs found, and can be used to make predictions on MOFs' thermal breakdown temperature and solvent removal stability.
-3. Prediction with Uncertainty: Provides stability classification on new MOFs with quantified uncertainty.
+The models are trained on experimental data from the CoRE MOF database and use geometric descriptors extracted via Zeo++ to make stability predictions on new MOF structures.
 
-## Usage
+## Key Features
 
-### Prerequisites
+- **Automated Feature Extraction**: Extract geometric and topological features from CIF files using Zeo++
+- **Multiple ML Models**: Pre-trained neural networks and ensemble models for different stability metrics
+- **Scalable Processing**: MPI support for parallel feature extraction on large MOF datasets
+- **Nearest Neighbor Search**: Find similar MOFs in the database for reference
 
-To train OptiMOF on your own data set or use it for prediction:
+## Prerequisites
 
-- `python` version `3.6` or above
-- Libraries: `numpy`, `pandas`, `scikit-learn`, `scipy`, `PyTorch`
-- Optional: to run automated scripts, [Taskfile](https://taskfile.dev/installation/) version 3 is required to run the automation scripts.
+### Environment Setup
 
-To conduct feature extraction:
+Create and activate the conda environment from the provided specification:
 
-- `python < 3.8` due to compatibility issues. See [here](environment.yml) for a list of dependencies.
-- Feature extraction: `C++14` compiler and [GNU Make](https://www.gnu.org/software/make/) are required for compiling zeo++.
-- Optional: to leverage parallel computing, a distributed memory system that supports [MPI](https://www.open-mpi.org/) is needed
+```bash
+conda env create -f environment.yml
+conda activate mof
+```
 
-Make sure these tools and versions are properly installed and configured in your development environment to fully utilize the features and tests.
+This will install all required dependencies including Python 3.12, PyTorch, scikit-learn, XGBoost, and other necessary packages.
+
+### Optional: Parallel Computing
+
+For large-scale feature extraction, **MPI (Message Passing Interface)** can be used to parallelize the processing of multiple CIF files across distributed systems or multi-core machines. Install an MPI implementation such as:
+
+- **OpenMPI**: `conda install -c conda-forge openmpi mpi4py`
+- **MPICH**: `conda install -c conda-forge mpich mpi4py`
+
+With MPI installed, you can use `make mpi-extract-all` to extract features in parallel.
+
+## Quick Start
+
+```bash
+# Format code (optional)
+make format
+
+# Extract features from a single CIF file
+make extract-feature ARGS="--cif path/to/structure.cif"
+
+# Train all models
+make train-all
+
+# Test model performance
+make test-all
+```
+
+See `make help` for all available commands.
 
 ## Acknowledgements
 
