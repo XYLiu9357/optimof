@@ -53,7 +53,9 @@ def _prepare_model_data(
     # Filter out rows with missing label
     initial_count = len(df)
     df = df.dropna(subset=[label_col])
-    print(f"  {label_col.capitalize()}: Kept {len(df)}/{initial_count} rows with valid labels")
+    print(
+        f"  {label_col.capitalize()}: Kept {len(df)}/{initial_count} rows with valid labels"
+    )
 
     # Validate
     if not validate_dataframe_columns(df, ["name", label_col]):
@@ -145,7 +147,9 @@ def prepare_water_data(
     )
 
 
-def prepare_all_training_data(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def prepare_all_training_data(
+    data_dir: Path,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Prepare all training data from source CSVs.
 
     Args:
@@ -206,6 +210,7 @@ def get_feature_column_names(split_data_path: Path) -> list:
     """
     df = joblib.load(split_data_path)
     return get_feature_columns(df.columns.tolist())
+
 
 # ============================================================================
 # MAIN

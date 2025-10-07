@@ -123,8 +123,8 @@ if __name__ == "__main__":
 
     # Change these two lines to change the model tested
     test_data_path = data_dir / "thermal" / "thermal_test_data.pkl"
-    # model_file_path = project_path / "model" / "thermal_model.pkl"
-    model_file_path = project_path / "model" / "saved_models" / "thermal_model_52mae.pkl"
+    model_file_path = project_path / "model" / "thermal_model.pkl"
+    # model_file_path = project_path / "model" / "saved_models" / "thermal_model_52mae.pkl"
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)

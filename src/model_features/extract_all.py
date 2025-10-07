@@ -32,7 +32,9 @@ def _mp_extract(cif_file: str) -> pd.DataFrame:
     cif_without_suffix = cif_file[:-4] if cif_file.endswith(".cif") else cif_file
 
     try:
-        result_df = extract_features(_project_path, str(target_path), id=cif_without_suffix)
+        result_df = extract_features(
+            _project_path, str(target_path), id=cif_without_suffix
+        )
         if result_df.empty:
             print(f"✗ Failed to extract features from {cif_file}")
             return pd.DataFrame()
@@ -92,7 +94,9 @@ def extract_all(
     if not valid_results:
         raise RuntimeError("All feature extractions failed")
 
-    print(f"Successfully extracted features from {len(valid_results)}/{len(cif_files)} files")
+    print(
+        f"Successfully extracted features from {len(valid_results)}/{len(cif_files)} files"
+    )
 
     # Combine all results
     all_feature_df = pd.concat(valid_results, ignore_index=True)
