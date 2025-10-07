@@ -1,19 +1,20 @@
 """feature_extraction.py
 Extract training features from .cif files using Zeo++ library
-and RAC_finder module. 
+and RAC_finder module.
 
-Important Notes: 
-- Only supports openbabel 2.4.1 for RAC extraction. 
+Important Notes:
+- Only supports openbabel 2.4.1 for RAC extraction.
 - openbabel 2.4.1 only supports python version < 3.8
 
-Reference: 
+Reference:
 - https://github.com/hjkgrp/MOFSimplify
 """
 
-import sys
 import os
-import subprocess
 import shutil
+import subprocess
+import sys
+
 import numpy as np
 import pandas as pd
 

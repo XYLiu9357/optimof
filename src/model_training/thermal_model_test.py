@@ -1,26 +1,25 @@
 """thermal_model_test.py
-Utility class for evaluating performance of the thermal breakdown temperature model. 
-Requires a test set that was not used in training. 
+Utility class for evaluating performance of the thermal breakdown temperature model.
+Requires a test set that was not used in training.
 """
 
-import os
 import math
-import torch
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import scipy.stats as stats
-
+import seaborn as sns
+import torch
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from thermal_model import ThermalModel
 
 
 class ThermalModelPerfTest:
 
     def __init__(
-        self, model_file_path: str, test_features: pd.DataFrame, test_labels: pd.Series
+        self, model_file_path: Path, test_features: pd.DataFrame, test_labels: pd.Series
     ):
-        self.project_path = project_path
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load the model
@@ -66,7 +65,7 @@ class ThermalModelPerfTest:
         print(f"Mean Absolute Error: {mae:.4f}")
         return mae
 
-    def plot_actual_vs_predicted(self, save_dir):
+    def plot_actual_vs_predicted(self, save_dir: Path):
         plt.figure(figsize=(10, 6))
         plt.scatter(self.test_labels, self.predictions, alpha=0.5)
         plt.plot(
@@ -77,9 +76,9 @@ class ThermalModelPerfTest:
         plt.xlabel("Actual Values")
         plt.ylabel("Predicted Values")
         plt.title("Actual vs Predicted Values")
-        plt.savefig(os.path.join(save_dir, "actual_vs_predicted.png"))
+        plt.savefig(save_dir / "actual_vs_predicted.png")
 
-    def plot_residuals(self, save_dir):
+    def plot_residuals(self, save_dir: Path):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         plt.scatter(self.predictions, residuals, alpha=0.5)
@@ -87,24 +86,24 @@ class ThermalModelPerfTest:
         plt.xlabel("Predicted Values")
         plt.ylabel("Residuals")
         plt.title("Residuals vs Predicted Values")
-        plt.savefig(os.path.join(save_dir, "residuals.png"))
+        plt.savefig(save_dir / "residuals.png")
 
-    def plot_residuals_distribution(self, save_dir):
+    def plot_residuals_distribution(self, save_dir: Path):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         sns.histplot(residuals, kde=True)
         plt.xlabel("Residuals")
         plt.title("Distribution of Residuals")
-        plt.savefig(os.path.join(save_dir, "residual_distribution.png"))
+        plt.savefig(save_dir / "residual_distribution.png")
 
-    def plot_qq(self, save_dir):
+    def plot_qq(self, save_dir: Path):
         residuals = self.test_labels - self.predictions
         plt.figure(figsize=(10, 6))
         stats.probplot(residuals.flatten(), dist="norm", plot=plt)
         plt.title("QQ Plot of Residuals")
-        plt.savefig(os.path.join(save_dir, "qq_plot.png"))
+        plt.savefig(save_dir / "qq_plot.png")
 
-    def plot_pairwise(self, save_dir):
+    def plot_pairwise(self, save_dir: Path):
         residuals = self.test_labels - self.predictions
         feature_analysis = pd.DataFrame(
             self.test_features.cpu().numpy(),
@@ -112,22 +111,20 @@ class ThermalModelPerfTest:
         )
         feature_analysis["Residuals"] = residuals
         sns.pairplot(feature_analysis)
-        plt.savefig(os.path.join(save_dir, "pairwise.png"))
+        plt.savefig(save_dir / "pairwise.png")
 
 
 if __name__ == "__main__":
     print("**Testing thermal model accuracy**")
 
     # Configure paths
-    project_path: str = "."
-    data_dir: str = os.path.join(project_path, "data")
+    project_path = Path(".")
+    data_dir = project_path / "data"
 
     # Change these two lines to change the model tested
-    test_data_path: str = os.path.join(data_dir, "thermal", "thermal_test_data.pkl")
-    model_file_path: str = os.path.join(project_path, "model", "thermal_model.pkl")
-    # model_file_path: str = os.path.join(
-    #     project_path, "model", "saved_models", "thermal_model_31rmse.pkl"
-    # )
+    test_data_path = data_dir / "thermal" / "thermal_test_data.pkl"
+    model_file_path = project_path / "model" / "thermal_model.pkl"
+    # model_file_path = project_path / "model" / "saved_models" / "thermal_model_31rmse.pkl"
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
@@ -136,7 +133,7 @@ if __name__ == "__main__":
 
     # Performance tests
     performance_test = ThermalModelPerfTest(model_file_path, test_features, test_labels)
-    save_dir = os.path.join(".", "performance", "thermal")
+    save_dir = Path(".") / "performance" / "thermal"
 
     performance_test.calculate_r2()
     performance_test.calculate_mse()

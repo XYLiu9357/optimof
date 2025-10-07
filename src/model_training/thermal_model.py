@@ -1,26 +1,26 @@
 """thermal_model.py
-Main model for MOF thermal stability prediction. Feature extraction procedures should be 
-invoked prior to running this training script. 
+Main model for MOF thermal stability prediction. Feature extraction procedures should be
+invoked prior to running this training script.
 
 Task: Regression
 Predictor: MOF geometric information found using Zeo++
-Predictand: MOF breakdown temperature 
+Predictand: MOF breakdown temperature
 
 * The model only uses fully connected layers for simplification.
 """
 
-import os
-import joblib
 import json
-import pandas as pd
-from typing import List, Dict
-from sklearn.model_selection import train_test_split as sklearn_train_test_split
-from sklearn.preprocessing import StandardScaler
+from pathlib import Path
+from typing import Dict, List
 
+import joblib
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import TensorDataset, DataLoader
+from sklearn.model_selection import train_test_split as sklearn_train_test_split
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader, TensorDataset
 
 
 # Model class
@@ -77,13 +77,13 @@ class ThermalModelPipeline:
 
     def __init__(
         self,
-        project_path: str,
+        project_path: Path,
         hyperparams: Dict,
         all_df: pd.DataFrame,
         save=True,
     ):
         # Store attributes
-        self.project_path: str = project_path
+        self.project_path: Path = Path(project_path)
         self.hyperparams: Dict = hyperparams
         self.train_test_split(all_df, test_size=0.2)
 
@@ -109,9 +109,7 @@ class ThermalModelPipeline:
 
         # Save model if specified
         if save:
-            model_file_path: str = os.path.join(
-                project_path, "model", "thermal_model.pkl"
-            )
+            model_file_path = self.project_path / "model" / "thermal_model.pkl"
             torch.save(self.model, model_file_path)
             print("**Model saved**")
 
@@ -121,8 +119,8 @@ class ThermalModelPipeline:
         self.scalar.fit(self.model_input_features)
 
         # Save scalar
-        scalar_file_path = os.path.join(
-            self.project_path, "model", "preprocess", "thermal_scalar.pkl"
+        scalar_file_path = (
+            self.project_path / "model" / "preprocess" / "thermal_scalar.pkl"
         )
         joblib.dump(self.scalar, scalar_file_path)
 
@@ -275,10 +273,10 @@ class ThermalModelPipeline:
 
 if __name__ == "__main__":
     # File configs
-    project_path: str = "."
+    project_path = Path(".")
     hyperparam_file_name = "thermal_hyperparams.json"
-    data_dir: str = os.path.join(project_path, "data", "thermal")
-    data_file_path = os.path.join(data_dir, "thermal_split_data.pkl")
+    data_dir = project_path / "data" / "thermal"
+    data_file_path = data_dir / "thermal_split_data.pkl"
 
     # Read data: train on all features
     # removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]
@@ -287,9 +285,7 @@ if __name__ == "__main__":
 
     # Read hyperparameters
     print("**Reading hyperparameter config**")
-    hyperparam_file_path: str = os.path.join(
-        project_path, "model", hyperparam_file_name
-    )
+    hyperparam_file_path = project_path / "model" / hyperparam_file_name
     with open(hyperparam_file_path, "r") as f:
         hyperparams: Dict = json.load(f)
 
@@ -299,13 +295,13 @@ if __name__ == "__main__":
     )
 
     # Use test features and labels to benchmark performance
-    model_file_name: str = "thermal_model.pkl"
-    model_file_path: str = os.path.join(project_path, "model", model_file_name)
+    model_file_name = "thermal_model.pkl"
+    model_file_path = project_path / "model" / model_file_name
     test_features, test_labels = pipeline.get_test_data()
     test_all = pd.concat([test_labels, test_features], axis=1)
 
     # Save unused test data for future testing
     print(f"**Model saved at {model_file_path}**")
-    test_data_path = os.path.join(data_dir, "thermal_test_data.pkl")
+    test_data_path = data_dir / "thermal_test_data.pkl"
     test_all.to_pickle(test_data_path)
     print(f"**Test data saved at {test_data_path}**")

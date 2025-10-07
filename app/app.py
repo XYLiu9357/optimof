@@ -2,12 +2,14 @@
 Backend of Flask web app.
 """
 
-import os
-from flask import Flask, render_template, request
+from pathlib import Path
+
 import numpy as np
+from flask import Flask, render_template, request
+
 from src.utils import predict_from_file
 
-project_path = "."
+project_path = Path(".")
 app = Flask(__name__)
 
 
@@ -27,7 +29,7 @@ def predict():
         return "Invalid file type. Please upload a .cif file.", 400
 
     # Save the file to a temporary location
-    input_path = os.path.join("app", "temp", file.filename)
+    input_path = Path("app") / "temp" / file.filename
     file.save(input_path)
 
     # Call the prediction function and get three numpy arrays

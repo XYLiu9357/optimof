@@ -1,13 +1,14 @@
 """extract_all.py
-Run feature_extraction commands on all CIF files in the specified directory. 
+Run feature_extraction commands on all CIF files in the specified directory.
 """
 
+import multiprocessing as mp
 import os
 import sys
+
 import pandas as pd
-from mpi4py import MPI
-import multiprocessing as mp
 from feature_extraction import extract_features
+from mpi4py import MPI
 
 
 def _mpi_extract(cif_file, src_dir, project_path):

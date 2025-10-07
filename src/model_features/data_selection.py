@@ -3,16 +3,19 @@ Merge solvent, thermal, and water stability data into one
 dataframe. Used to produce all_in_one.pkl.
 """
 
-import os
+from pathlib import Path
+
 import joblib
 import pandas as pd
 
 
-def split_data(data_dir, all_in_one_data_path):
+def split_data(data_dir: Path, all_in_one_data_path: Path):
     """split_data
     Split the data to be used by the three models. Split data contains no NaN values and
     can be used directly in training.
     """
+    data_dir = Path(data_dir)
+    all_in_one_data_path = Path(all_in_one_data_path)
     init_df = joblib.load(all_in_one_data_path)
     init_df = init_df.set_index("name")
     labels = ["thermal", "solvent", "water"]
@@ -42,22 +45,20 @@ def split_data(data_dir, all_in_one_data_path):
                 "mc-I-0-all",
             ]
             prep_df = prep_df.drop(water_additional_drops, axis=1)
-            file_path = os.path.join(
-                data_dir, "water_and_haz", label + "_split_data.pkl"
-            )
+            file_path = data_dir / "water_and_haz" / f"{label}_split_data.pkl"
             joblib.dump(prep_df, file_path)
         # Save to file
         else:
-            file_path = os.path.join(data_dir, label, label + "_split_data.pkl")
+            file_path = data_dir / label / f"{label}_split_data.pkl"
             joblib.dump(prep_df, file_path)
 
 
 def merge_data(
-    thermal_data_path,
-    solvent_data_path,
-    water_data_path,
-    saved_file_path,
-    saved_cols_path,
+    thermal_data_path: Path,
+    solvent_data_path: Path,
+    water_data_path: Path,
+    saved_file_path: Path,
+    saved_cols_path: Path,
 ):
     """merge_data
     Merge the data used for model training
@@ -140,25 +141,25 @@ def merge_data(
 
 if __name__ == "__main__":
     print("**Data Selection**")
-    project_path = "."
-    data_dir = os.path.join(project_path, "data")
-    all_in_one_pkl = os.path.join(data_dir, "all_in_one.pkl")
-    all_cols_pkl = os.path.join(data_dir, "all_in_one_cols.pkl")
+    project_path = Path(".")
+    data_dir = project_path / "data"
+    all_in_one_pkl = data_dir / "all_in_one.pkl"
+    all_cols_pkl = data_dir / "all_in_one_cols.pkl"
 
     # Reorganize data
-    if not os.path.isfile(all_in_one_pkl):
-        thermal_path = os.path.join(data_dir, "thermal", "thermal_all_data.csv")
-        solvent_path = os.path.join(data_dir, "solvent", "solvent_all_data.csv")
-        water_path = os.path.join(data_dir, "water_and_haz", "data.csv")
+    if not all_in_one_pkl.is_file():
+        thermal_path = data_dir / "thermal" / "thermal_all_data.csv"
+        solvent_path = data_dir / "solvent" / "solvent_all_data.csv"
+        water_path = data_dir / "water_and_haz" / "data.csv"
         merge_data(thermal_path, solvent_path, water_path, all_in_one_pkl, all_cols_pkl)
         split_data(data_dir, all_in_one_pkl)
     else:
         print(f"Warning: data exists at {all_in_one_pkl}")
 
     # Check data integrity
-    thermal_pkl_path = os.path.join(data_dir, "thermal", "thermal_split_data.pkl")
-    solvent_pkl_path = os.path.join(data_dir, "solvent", "solvent_split_data.pkl")
-    water_pkl_path = os.path.join(data_dir, "water_and_haz", "water_split_data.pkl")
+    thermal_pkl_path = data_dir / "thermal" / "thermal_split_data.pkl"
+    solvent_pkl_path = data_dir / "solvent" / "solvent_split_data.pkl"
+    water_pkl_path = data_dir / "water_and_haz" / "water_split_data.pkl"
 
     thermal_df = joblib.load(thermal_pkl_path)
     solvent_df = joblib.load(solvent_pkl_path)

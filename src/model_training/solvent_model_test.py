@@ -1,32 +1,31 @@
 """solvent_model_test.py
-Utility class for evaluating performance of the solvent removal stability model. 
-Requires a test set that was not used in training. 
+Utility class for evaluating performance of the solvent removal stability model.
+Requires a test set that was not used in training.
 """
 
-import os
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 import torch
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
     roc_auc_score,
-    confusion_matrix,
     roc_curve,
 )
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-
 from solvent_model import SolventModel
 
 
 class SolventModelPerfTest:
 
     def __init__(
-        self, model_file_path: str, test_features: pd.DataFrame, test_labels: pd.Series
+        self, model_file_path: Path, test_features: pd.DataFrame, test_labels: pd.Series
     ):
-        self.project_path = project_path
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load the model
@@ -84,16 +83,16 @@ class SolventModelPerfTest:
         print(f"AUC-ROC: {auc:.4f}")
         return auc
 
-    def plot_confusion_matrix(self, save_dir):
+    def plot_confusion_matrix(self, save_dir: Path):
         cm = confusion_matrix(self.test_labels, self.binary_predictions)
         plt.figure(figsize=(6, 4))
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
         plt.xlabel("Predicted Labels")
         plt.ylabel("True Labels")
         plt.title("Confusion Matrix")
-        plt.savefig(os.path.join(save_dir, "confusion_matrix.png"))
+        plt.savefig(save_dir / "confusion_matrix.png")
 
-    def plot_roc_curve(self, save_dir):
+    def plot_roc_curve(self, save_dir: Path):
         fpr, tpr, _ = roc_curve(self.test_labels, self.predictions)
         plt.figure(figsize=(10, 6))
         plt.plot(
@@ -106,19 +105,19 @@ class SolventModelPerfTest:
         plt.ylabel("True Positive Rate")
         plt.title("ROC Curve")
         plt.legend(loc="lower right")
-        plt.savefig(os.path.join(save_dir, "roc_curve.png"))
+        plt.savefig(save_dir / "roc_curve.png")
 
 
 if __name__ == "__main__":
     print("**Testing solvent model accuracy**")
 
     # Configure paths
-    project_path: str = "."
-    data_dir: str = os.path.join(project_path, "data")
+    project_path = Path(".")
+    data_dir = project_path / "data"
 
     # Change these two lines to change the model tested
-    test_data_path: str = os.path.join(data_dir, "solvent", "solvent_test_data.pkl")
-    model_file_path: str = os.path.join(project_path, "model", "solvent_model.pkl")
+    test_data_path = data_dir / "solvent" / "solvent_test_data.pkl"
+    model_file_path = project_path / "model" / "solvent_model.pkl"
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)
@@ -127,7 +126,7 @@ if __name__ == "__main__":
 
     # Performance tests
     performance_test = SolventModelPerfTest(model_file_path, test_features, test_labels)
-    save_dir = os.path.join(".", "performance", "solvent")
+    save_dir = Path(".") / "performance" / "solvent"
 
     performance_test.calculate_accuracy()
     performance_test.calculate_precision()

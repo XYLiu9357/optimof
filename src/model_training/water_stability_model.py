@@ -1,31 +1,32 @@
 """water_stability_model.py
-Main model for MOF water stability prediction. Feature extraction procedures 
-should be invoked prior to running this training script. 
+Main model for MOF water stability prediction. Feature extraction procedures
+should be invoked prior to running this training script.
 
 Task: 4-class classification
 Predictor: MOF geometric information found using Zeo++
 Predictand: MOF stability upon solvent removal
 """
 
-import os
+from pathlib import Path
+
 import joblib
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
-import xgboost as xgb
+import pandas as pd
+import seaborn as sns
 import shap
+import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.preprocessing import label_binarize
 from sklearn.metrics import (
-    classification_report,
     accuracy_score,
+    auc,
+    classification_report,
     confusion_matrix,
     roc_auc_score,
     roc_curve,
-    auc,
 )
-import matplotlib.pyplot as plt
-import seaborn as sns
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.preprocessing import label_binarize
 
 
 class WaterStabilityRF:
@@ -44,7 +45,7 @@ class WaterStabilityRF:
     """
 
     def __init__(
-        self, project_dir: str, features: pd.DataFrame, labels: pd.DataFrame
+        self, project_dir: Path, features: pd.DataFrame, labels: pd.DataFrame
     ) -> None:
         (
             self.train_features,
@@ -53,10 +54,11 @@ class WaterStabilityRF:
             self.test_labels,
         ) = train_test_split(features, labels, test_size=0.2, random_state=0)
 
-        self.model_save_path = os.path.join(project_dir, "model", "water_rf_model.pkl")
-        self.fig_save_dir = os.path.join(project_dir, "performance", "water_rf")
-        self.test_data_save_path = os.path.join(
-            project_dir, "data", "water_and_haz", "water_rf_test_data.pkl"
+        project_dir = Path(project_dir)
+        self.model_save_path = project_dir / "model" / "water_rf_model.pkl"
+        self.fig_save_dir = project_dir / "performance" / "water_rf"
+        self.test_data_save_path = (
+            project_dir / "data" / "water_and_haz" / "water_rf_test_data.pkl"
         )
 
     # Train the model and tune hyperparameters
@@ -88,6 +90,9 @@ class WaterStabilityRF:
 
     # Run performance tests
     def run_perf_tests(self):
+        # Ensure fig_save_dir is a Path object (for backward compatibility with pickled models)
+        fig_save_dir = Path(self.fig_save_dir)
+
         predictions = self.model.predict(self.test_features)
         accuracy = accuracy_score(self.test_labels, predictions)
         roc_auc = roc_auc_score(
@@ -110,7 +115,7 @@ class WaterStabilityRF:
         plt.title("Confusion Matrix")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
-        plt.savefig(os.path.join(self.fig_save_dir, "confusion_matrix.png"))
+        plt.savefig(fig_save_dir / "confusion_matrix.png")
         plt.close()
 
         # ROC Curve
@@ -144,7 +149,7 @@ class WaterStabilityRF:
         plt.ylabel("True Positive Rate")
         plt.title("Receiver Operating Characteristic")
         plt.legend(loc="lower right")
-        plt.savefig(os.path.join(self.fig_save_dir, "roc_curve.png"))
+        plt.savefig(fig_save_dir / "roc_curve.png")
         plt.close()
 
         # # SHAP value distribution calculations
@@ -201,9 +206,11 @@ class WaterStabilityRF:
         joblib.dump(self, self.model_save_path)
 
     def save_test_data(self):
+        # Ensure test_data_save_path is a Path object (for backward compatibility with pickled models)
+        test_data_save_path = Path(self.test_data_save_path)
         test_data = pd.concat([self.test_labels, self.test_features])
-        test_data.to_pickle(self.test_data_save_path)
-        print(f"Test data saved to: {self.test_data_save_path}")
+        test_data.to_pickle(test_data_save_path)
+        print(f"Test data saved to: {test_data_save_path}")
 
 
 class WaterStabilityBoost:
@@ -222,7 +229,7 @@ class WaterStabilityBoost:
     """
 
     def __init__(
-        self, project_dir: str, features: pd.DataFrame, labels: pd.DataFrame
+        self, project_dir: Path, features: pd.DataFrame, labels: pd.DataFrame
     ) -> None:
         (
             self.train_features,
@@ -231,12 +238,11 @@ class WaterStabilityBoost:
             self.test_labels,
         ) = train_test_split(features, labels, test_size=0.2, random_state=0)
 
-        self.model_save_path = os.path.join(
-            project_dir, "model", "water_boost_model.pkl"
-        )
-        self.fig_save_dir = os.path.join(project_dir, "performance", "water_boost")
-        self.test_data_save_path = os.path.join(
-            project_dir, "data", "water_and_haz", "water_boost_test_data.pkl"
+        project_dir = Path(project_dir)
+        self.model_save_path = project_dir / "model" / "water_boost_model.pkl"
+        self.fig_save_dir = project_dir / "performance" / "water_boost"
+        self.test_data_save_path = (
+            project_dir / "data" / "water_and_haz" / "water_boost_test_data.pkl"
         )
 
     # Train the model and tune hyperparameters
@@ -265,6 +271,9 @@ class WaterStabilityBoost:
 
     # Run performance tests
     def run_perf_tests(self):
+        # Ensure fig_save_dir is a Path object (for backward compatibility with pickled models)
+        fig_save_dir = Path(self.fig_save_dir)
+
         predictions = self.model.predict(self.test_features)
         accuracy = accuracy_score(self.test_labels, predictions)
         roc_auc = roc_auc_score(
@@ -287,7 +296,7 @@ class WaterStabilityBoost:
         plt.title("Confusion Matrix")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
-        plt.savefig(os.path.join(self.fig_save_dir, "confusion_matrix.png"))
+        plt.savefig(fig_save_dir / "confusion_matrix.png")
         plt.close()
 
         # ROC Curve
@@ -333,7 +342,7 @@ class WaterStabilityBoost:
         plt.ylabel("True Positive Rate")
         plt.title("Receiver Operating Characteristic")
         plt.legend(loc="lower right")
-        plt.savefig(os.path.join(self.fig_save_dir, "roc_curve.png"))
+        plt.savefig(fig_save_dir / "roc_curve.png")
         plt.close()
 
         return [accuracy, roc_auc]
@@ -343,15 +352,17 @@ class WaterStabilityBoost:
         joblib.dump(self, self.model_save_path)
 
     def save_test_data(self):
+        # Ensure test_data_save_path is a Path object (for backward compatibility with pickled models)
+        test_data_save_path = Path(self.test_data_save_path)
         test_data = pd.concat([self.test_labels, self.test_features])
-        test_data.to_pickle(self.test_data_save_path)
-        print(f"Test data saved to: {self.test_data_save_path}")
+        test_data.to_pickle(test_data_save_path)
+        print(f"Test data saved to: {test_data_save_path}")
 
 
 if __name__ == "__main__":
-    project_dir = "."
-    data_dir = os.path.join(project_dir, "data")
-    solvent_data_path = os.path.join(data_dir, "water_and_haz", "water_split_data.pkl")
+    project_dir = Path(".")
+    data_dir = project_dir / "data"
+    solvent_data_path = data_dir / "water_and_haz" / "water_split_data.pkl"
     df_clean = joblib.load(solvent_data_path)
 
     # Data cleansing

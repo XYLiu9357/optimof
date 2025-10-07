@@ -5,6 +5,7 @@ CoRE2019
 mof-tree.pkl
 filled*.pkl
 targets
+performance/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,21 +1,21 @@
 """mof_map.py
-Implements a wrapper for scikit-learn KDTree for querying MOFs 
-that are closest to satisfying some criteria. 
+Implements a wrapper for scikit-learn KDTree for querying MOFs
+that are closest to satisfying some criteria.
 
-This container is not optimized for large-scale insertion and 
-removal of content. Its sole purpose is to support efficient 
+This container is not optimized for large-scale insertion and
+removal of content. Its sole purpose is to support efficient
 nearest neighbor query for processed MOFs.
 """
 
 import os
+
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import KDTree
-import joblib
 
 
 class MOFMap:
-
     def __init__(
         self,
         mof_df=None,

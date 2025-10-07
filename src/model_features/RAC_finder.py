@@ -1,13 +1,14 @@
 """RAC_finder.py
-Compute revised autocorrelation functions (RACs) for feature extraction. 
+Compute revised autocorrelation functions (RACs) for feature extraction.
 
-Optimized I/O pipeline. Original design by Kulik's Group @MIT: 
+Optimized I/O pipeline. Original design by Kulik's Group @MIT:
 - https://github.com/hjkgrp/molSimplify
 - https://github.com/hjkgrp/MOFSimplify
 """
 
 import os
 import sys
+
 from molSimplify.Informatics.MOF.MOF_descriptors import get_MOF_descriptors
 
 

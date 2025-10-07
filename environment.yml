@@ -13,6 +13,7 @@ dependencies:
   - asgiref=3.8.1=py312h06a4308_0
   - astunparse=1.6.3=pyhd8ed1ab_0
   - attr=2.5.1=h166bdaf_1
+  - black>=24.0.0
   - blas=1.0=mkl
   - blinker=1.6.2=py312h06a4308_0
   - brotli=1.0.9=he6710b0_2
@@ -87,6 +88,7 @@ dependencies:
   - importlib-resources=6.4.4=pyhd8ed1ab_0
   - importlib_resources=6.4.4=pyhd8ed1ab_0
   - intel-openmp=2022.0.1=h06a4308_3633
+  - isort>=5.0.0
   - itsdangerous=2.2.0=py312h06a4308_0
   - jinja2=3.1.4=py312h06a4308_0
   - joblib=1.4.2=pyhd8ed1ab_0

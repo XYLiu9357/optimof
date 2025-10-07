@@ -9,31 +9,31 @@ Initializes the mof query database by completing the following
 """
 
 import os
-import sys
-import joblib
 import subprocess
+import sys
+from datetime import datetime
+
+import joblib
 import numpy as np
 import pandas as pd
-
-from datetime import datetime
 import torch
 import xgboost
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 
 from app import run_flask_client
-from src.utils import MOFMap
+from src.model_training.solvent_model import SolventModel
+from src.model_training.thermal_model import ThermalModel
+from src.model_training.water_stability_model import (
+    WaterStabilityBoost,
+    WaterStabilityRF,
+)
 from src.utils import (
-    predict_df,
-    predict_from_file,
+    MOFMap,
     fill_all_unknown,
     get_nearest_neighbor,
-)
-from src.model_training.thermal_model import ThermalModel
-from src.model_training.solvent_model import SolventModel
-from src.model_training.water_stability_model import (
-    WaterStabilityRF,
-    WaterStabilityBoost,
+    predict_df,
+    predict_from_file,
 )
 
 project_path = "."

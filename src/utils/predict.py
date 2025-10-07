@@ -8,25 +8,26 @@ by prediction in the all-in-one data set.
 4. Output predicted labels in dataframe
 """
 
-import os
+from datetime import datetime
+from pathlib import Path
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-
 import torch
 import xgboost
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+
+from src.model_features import extract_features
+from src.model_training.solvent_model import SolventModel
+from src.model_training.thermal_model import ThermalModel
+from src.model_training.water_stability_model import (
+    WaterStabilityBoost,
+    WaterStabilityRF,
+)
 
 from .mof_map import MOFMap
-from src.model_features import extract_features
-from src.model_training.thermal_model import ThermalModel
-from src.model_training.solvent_model import SolventModel
-from src.model_training.water_stability_model import (
-    WaterStabilityRF,
-    WaterStabilityBoost,
-)
 
 
 # Get current date and time as a string
@@ -63,11 +64,11 @@ def sigmoid(logits: np.ndarray):
 
 # Extract features from file and fix formatting
 def extract_from_file(
-    project_path: str, target_path: str, id=current_time()
+    project_path: Path, target_path: Path, id=current_time()
 ) -> pd.DataFrame:
     extracted_df = extract_features(project_path, target_path, id)
     extracted_df.loc[:, "name"] = id
-    all_cols = joblib.load(os.path.join(project_path, "data", "all_in_one_cols.pkl"))
+    all_cols = joblib.load(project_path / "data" / "all_in_one_cols.pkl")
 
     # Extract feature columns (by removing label columns in stored data)
     label_cols = ["thermal", "solvent", "water"]
@@ -85,7 +86,7 @@ def trim_labels(df: pd.DataFrame):
 
 
 # Run ANN model on the given input. Thermal and solvent model share this procedure.
-def pred_ann(model_path: str, scalar_path: str, feature_df: pd.DataFrame):
+def pred_ann(model_path: Path, scalar_path: Path, feature_df: pd.DataFrame):
     # Standard scale data
     scalar: StandardScaler = joblib.load(scalar_path)
     scaled_df = scalar.transform(feature_df)
@@ -105,7 +106,7 @@ def pred_ann(model_path: str, scalar_path: str, feature_df: pd.DataFrame):
     return pred
 
 
-def pred_water(model_path: str, feature_df: pd.DataFrame) -> bool:
+def pred_water(model_path: Path, feature_df: pd.DataFrame) -> bool:
     model_obj = joblib.load(model_path)
     model: RandomForestClassifier = model_obj.model
 
@@ -153,12 +154,13 @@ def get_ground_truth(data_path, lookup_df):
 
 
 # Make predictions based on input dataframe
-def predict_df(project_path: str, feature_df: pd.DataFrame):
-    model_dir = os.path.join(project_path, "model")
-    scalar_dir = os.path.join(model_dir, "preprocess")
+def predict_df(project_path: Path, feature_df: pd.DataFrame):
+    project_path = Path(project_path)
+    model_dir = project_path / "model"
+    scalar_dir = model_dir / "preprocess"
 
     # # Check if there is a ground truth match
-    # data_path = os.path.join(project_path, "data", "all_in_one.pkl")
+    # data_path = project_path / "data" / "all_in_one.pkl"
     # match = get_ground_truth(data_path, feature_df)
 
     # if match is not None:
@@ -166,27 +168,27 @@ def predict_df(project_path: str, feature_df: pd.DataFrame):
     #     temperatures, solvent_flags, water_flags = match.loc["temperature"].to_numpy(), match.loc["solvent"].to_numpy(), match.loc["water"].to_numpy()
 
     # Thermal model
-    thermal_model_path = os.path.join(model_dir, "thermal_model.pkl")
-    thermal_scalar_path = os.path.join(scalar_dir, "thermal_scalar.pkl")
+    thermal_model_path = model_dir / "thermal_model.pkl"
+    thermal_scalar_path = scalar_dir / "thermal_scalar.pkl"
     temperatures = pred_ann(thermal_model_path, thermal_scalar_path, feature_df)
     print(f"Thermal model prediction successful: {temperatures}")
 
     # Solvent model
-    solvent_model_path = os.path.join(model_dir, "solvent_model.pkl")
-    solvent_scalar_path = os.path.join(scalar_dir, "solvent_scalar.pkl")
+    solvent_model_path = model_dir / "solvent_model.pkl"
+    solvent_scalar_path = scalar_dir / "solvent_scalar.pkl"
     solvent_logits = pred_ann(solvent_model_path, solvent_scalar_path, feature_df)
     solvent_flags = sigmoid(solvent_logits)
     print(f"Solvent model prediction successful: {solvent_flags}")
 
     # Water stability model
-    water_model_path = os.path.join(model_dir, "water_rf_model.pkl")
+    water_model_path = model_dir / "water_rf_model.pkl"
     water_flags = pred_water(water_model_path, feature_df)
     print(f"Water stability model prediction successful: {water_flags}")
     return temperatures, solvent_flags, water_flags
 
 
 # Make predictions based on CIF file
-def predict_from_file(project_path: str, target_path: str) -> pd.DataFrame:
+def predict_from_file(project_path: Path, target_path: Path) -> pd.DataFrame:
     # Extract feature vector
     feature_df = extract_from_file(project_path, target_path)
     print("Feature extraction successful")
@@ -196,7 +198,7 @@ def predict_from_file(project_path: str, target_path: str) -> pd.DataFrame:
 
 
 # Nearest neighbor search
-def get_nearest_neighbor(mof_map_path: str, query: pd.DataFrame) -> str:
+def get_nearest_neighbor(mof_map_path: Path, query: pd.DataFrame) -> str:
     mof_map: MOFMap = MOFMap()
     mof_map.import_from_file(mof_map_path)
     nn_result = mof_map.nearest_neighbor_query(query.values.reshape(1, -1))
@@ -204,9 +206,11 @@ def get_nearest_neighbor(mof_map_path: str, query: pd.DataFrame) -> str:
 
 
 # Fill unknown labels in the all-in-one dataset
-def fill_all_unknown(project_path: str, data_path: str) -> pd.DataFrame:
+def fill_all_unknown(project_path: Path, data_path: Path) -> pd.DataFrame:
     print("**Running fill_all_unknown")
     # Print information on the fill operation
+    project_path = Path(project_path)
+    data_path = Path(data_path)
     orig_df: pd.DataFrame = joblib.load(data_path)
     thermal_nan_count = orig_df.loc[:, "thermal"].isna().sum()
     solvent_nan_count = orig_df.loc[:, "solvent"].isna().sum()
@@ -224,13 +228,13 @@ def fill_all_unknown(project_path: str, data_path: str) -> pd.DataFrame:
         return None
 
     # Make path strings
-    model_dir = os.path.join(project_path, "model")
-    scalar_dir = os.path.join(model_dir, "preprocess")
-    thermal_model_path = os.path.join(model_dir, "thermal_model.pkl")
-    thermal_scalar_path = os.path.join(scalar_dir, "thermal_scalar.pkl")
-    solvent_model_path = os.path.join(model_dir, "solvent_model.pkl")
-    solvent_scalar_path = os.path.join(scalar_dir, "solvent_scalar.pkl")
-    water_model_path = os.path.join(model_dir, "water_rf_model.pkl")
+    model_dir = project_path / "model"
+    scalar_dir = model_dir / "preprocess"
+    thermal_model_path = model_dir / "thermal_model.pkl"
+    thermal_scalar_path = scalar_dir / "thermal_scalar.pkl"
+    solvent_model_path = model_dir / "solvent_model.pkl"
+    solvent_scalar_path = scalar_dir / "solvent_scalar.pkl"
+    water_model_path = model_dir / "water_rf_model.pkl"
 
     def fill_thermal(target_df: pd.DataFrame):
         # Isolate nan columns and make prediction
@@ -289,7 +293,7 @@ def fill_all_unknown(project_path: str, data_path: str) -> pd.DataFrame:
 
     # Save data
     file_name = "filled-" + current_time() + ".pkl"
-    file_save_path = os.path.join(project_path, "data", file_name)
+    file_save_path = project_path / "data" / file_name
     joblib.dump(updated_df, file_save_path)
     print(f"File saved to {file_save_path}")
     print("**Exiting fill_all_unknown")
