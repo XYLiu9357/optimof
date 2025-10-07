@@ -56,36 +56,36 @@ help:
 # Feature extraction
 .PHONY: extract-all
 extract-all: check-features
-	python $(EXTRACT_FEATURES) $(ARGS)
+	python -m src.model_features.extract_all $(ARGS)
 
 .PHONY: mpi-extract-all
 mpi-extract-all: check-features
-	python $(MPI_EXTRACT_FEATURES) $(ARGS)
+	python -m src.model_features.mpi_extract_all $(ARGS)
 
 .PHONY: extract-feature
 extract-feature:
-	python src/model_features/feature_extraction.py $(ARGS)
+	python -m src.model_features.feature_extraction $(ARGS)
 
 .PHONY: check-features
 check-features:
-	python data/check_features.py
+	python -m data.check_features
 
 .PHONY: select-data
 select-data:
-	python src/model_features/data_selection.py
+	python -m src.model_features.data_selection
 
 # Model training
 .PHONY: train-thermal
 train-thermal:
-	python src/model_training/thermal_model.py
+	python -m src.model_training.thermal_model
 
 .PHONY: train-solvent
 train-solvent:
-	python src/model_training/solvent_model.py
+	python -m src.model_training.solvent_model
 
 .PHONY: train-water
 train-water:
-	python src/model_training/water_stability_model.py
+	python -m src.model_training.water_stability_model
 
 .PHONY: train-all
 train-all: train-thermal train-solvent train-water
@@ -93,15 +93,15 @@ train-all: train-thermal train-solvent train-water
 # Model testing
 .PHONY: test-thermal
 test-thermal:
-	python src/model_training/thermal_model_test.py
+	python -m src.model_training.thermal_model_test
 
 .PHONY: test-solvent
 test-solvent:
-	python src/model_training/solvent_model_test.py
+	python -m src.model_training.solvent_model_test
 
 .PHONY: test-water
 test-water:
-	python src/model_training/water_stability_model_test.py
+	python -m src.model_training.water_stability_model_test
 
 .PHONY: test-all
 test-all: test-thermal test-solvent test-water
@@ -134,12 +134,12 @@ clean-zeo:
 # Clean
 .PHONY: clean-all
 clean-all:
-	-rm -r temp_*
-	-rm data/all_in_one.pkl
-	-rm data/all_in_one_cols.pkl
-	-rm data/*/*_split_data.pkl
-	-rm model/*.pkl
-	-rm model/preprocess/*.pkl
+	-rm -rf temp_*
+	-rm -f data/all_in_one.pkl
+	-rm -f data/*/*_clean_data.pkl
+	-rm -f data/*/*_test_data.pkl
+	-rm -f model/*.pkl
+	-rm -f model/scalers/*.pkl
 
 .PHONY: clean-temp
 clean-temp:

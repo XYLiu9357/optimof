@@ -120,7 +120,7 @@ class ThermalModelPipeline:
 
         # Save scalar
         scalar_file_path = (
-            self.project_path / "model" / "preprocess" / "thermal_scalar.pkl"
+            self.project_path / "model" / "scalers" / "thermal_scalar.pkl"
         )
         joblib.dump(self.scalar, scalar_file_path)
 
@@ -276,7 +276,7 @@ if __name__ == "__main__":
     project_path = Path(".")
     hyperparam_file_name = "thermal_hyperparams.json"
     data_dir = project_path / "data" / "thermal"
-    data_file_path = data_dir / "thermal_split_data.pkl"
+    data_file_path = data_dir / "thermal_clean_data.pkl"
 
     # Read data: train on all features
     # removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]

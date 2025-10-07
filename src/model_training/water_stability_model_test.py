@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import joblib
-from water_stability_model import WaterStabilityBoost, WaterStabilityRF
+
+from src.model_training.water_stability_model import WaterStabilityBoost, WaterStabilityRF
 
 if __name__ == "__main__":
     project_dir = Path(".")

@@ -18,7 +18,8 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from solvent_model import SolventModel
+
+from src.model_training.solvent_model import SolventModel
 
 
 class SolventModelPerfTest:

@@ -6,6 +6,9 @@ mof-tree.pkl
 filled*.pkl
 targets
 performance/
+**/*clean_data.pkl
+**/*test_data.pkl
+model/scalers/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

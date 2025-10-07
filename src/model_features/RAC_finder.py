@@ -8,47 +8,36 @@ Optimized I/O pipeline. Original design by Kulik's Group @MIT:
 
 import os
 import sys
+from pathlib import Path
 
 from molSimplify.Informatics.MOF.MOF_descriptors import get_MOF_descriptors
 
 
 def main():
+    """Extract MOF descriptors and write results to log file."""
+    if len(sys.argv) < 3:
+        print("Usage: python RAC_finder.py <primitive_path> <RAC_dir>")
+        sys.exit(1)
 
-    # user command line inputs
-    primitive_path = sys.argv[1]  # name of the MOF
-    RAC_dir = sys.argv[2]
-
-    print(RAC_dir)
-
-    # result log
-    f = open(os.path.join(RAC_dir, "RAC_getter_log.txt"), "w")
+    primitive_path = sys.argv[1]
+    rac_dir = Path(sys.argv[2])
+    log_file = rac_dir / "RAC_getter_log.txt"
 
     try:
-        # makes the linkers and sbus folders
         full_names, full_descriptors = get_MOF_descriptors(
             primitive_path,
             3,
-            path=RAC_dir,
-            xyzpath=os.path.join(RAC_dir, "temp.xyz"),
+            path=str(rac_dir),
+            xyzpath=str(rac_dir / "temp.xyz"),
         )
-    except ValueError:
-        f.write("FAILED")
-        f.close()
-        return "FAILED"
-    except NotImplementedError:
-        f.write("FAILED")
-        f.close()
-        return "FAILED"
-    except AssertionError:
-        f.write("FAILED")
-        f.close()
-        return "FAILED"
 
-    if (len(full_names) <= 1) and (
-        len(full_descriptors) <= 1
-    ):  # this is a featurization check from MOF_descriptors.py
-        f.write("FAILED")
-        f.close()
+        # Check if featurization was successful
+        if len(full_names) <= 1 and len(full_descriptors) <= 1:
+            log_file.write_text("FAILED")
+            return "FAILED"
+
+    except (ValueError, NotImplementedError, AssertionError):
+        log_file.write_text("FAILED")
         return "FAILED"
 
 

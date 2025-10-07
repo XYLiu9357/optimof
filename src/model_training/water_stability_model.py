@@ -362,7 +362,7 @@ class WaterStabilityBoost:
 if __name__ == "__main__":
     project_dir = Path(".")
     data_dir = project_dir / "data"
-    solvent_data_path = data_dir / "water_and_haz" / "water_split_data.pkl"
+    solvent_data_path = data_dir / "water_and_haz" / "water_clean_data.pkl"
     df_clean = joblib.load(solvent_data_path)
 
     # Data cleansing

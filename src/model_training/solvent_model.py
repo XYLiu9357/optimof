@@ -139,7 +139,7 @@ class SolventModelPipeline:
 
         # Save scalar
         scalar_file_path = (
-            self.project_path / "model" / "preprocess" / "solvent_scalar.pkl"
+            self.project_path / "model" / "scalers" / "solvent_scalar.pkl"
         )
         joblib.dump(self.scalar, scalar_file_path)
 
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     project_path = Path(".")
     hyperparam_file_name = "solvent_hyperparams.json"
     data_dir = project_path / "data" / "solvent"
-    data_file_path = data_dir / "solvent_split_data.pkl"
+    data_file_path = data_dir / "solvent_clean_data.pkl"
 
     # Read data: train on all features
     # removed_cols: List[str] = [

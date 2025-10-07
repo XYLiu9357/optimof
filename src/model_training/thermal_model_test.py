@@ -12,11 +12,11 @@ import scipy.stats as stats
 import seaborn as sns
 import torch
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from thermal_model import ThermalModel
+
+from src.model_training.thermal_model import ThermalModel
 
 
 class ThermalModelPerfTest:
-
     def __init__(
         self, model_file_path: Path, test_features: pd.DataFrame, test_labels: pd.Series
     ):
@@ -123,8 +123,8 @@ if __name__ == "__main__":
 
     # Change these two lines to change the model tested
     test_data_path = data_dir / "thermal" / "thermal_test_data.pkl"
-    model_file_path = project_path / "model" / "thermal_model.pkl"
-    # model_file_path = project_path / "model" / "saved_models" / "thermal_model_31rmse.pkl"
+    # model_file_path = project_path / "model" / "thermal_model.pkl"
+    model_file_path = project_path / "model" / "saved_models" / "thermal_model_52mae.pkl"
 
     # Load test data that are unused in training
     test_df: pd.DataFrame = pd.read_pickle(test_data_path)

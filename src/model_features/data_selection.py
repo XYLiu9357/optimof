@@ -1,174 +1,251 @@
 """data_selection.py
-Merge solvent, thermal, and water stability data into one
-dataframe. Used to produce all_in_one.pkl.
+Prepare training data from source CSVs.
 """
 
 from pathlib import Path
+from typing import Tuple
 
 import joblib
 import pandas as pd
 
+from src.model_features.config import (
+    LABEL_COLUMNS,
+    SOLVENT_DROP_COLS,
+    SOLVENT_RENAME_MAP,
+    THERMAL_DROP_COLS,
+    THERMAL_RENAME_MAP,
+    WATER_DROP_COLS,
+    WATER_MODEL_DROP_COLS,
+    WATER_RENAME_MAP,
+    get_feature_columns,
+    validate_dataframe_columns,
+)
 
-def split_data(data_dir: Path, all_in_one_data_path: Path):
-    """split_data
-    Split the data to be used by the three models. Split data contains no NaN values and
-    can be used directly in training.
+
+def _prepare_model_data(
+    csv_path: Path,
+    output_path: Path,
+    drop_cols: list,
+    rename_map: dict,
+    label_col: str,
+    extra_drop_cols: list | None = None,
+) -> pd.DataFrame:
+    """Generic function to prepare training data from CSV.
+
+    Args:
+        csv_path: Path to source CSV file
+        output_path: Path to save processed pkl file
+        drop_cols: List of columns to drop
+        rename_map: Dictionary for renaming columns
+        label_col: Name of the label column
+        extra_drop_cols: Optional additional columns to drop after main processing
+
+    Returns:
+        Cleaned DataFrame ready for training
     """
-    data_dir = Path(data_dir)
-    all_in_one_data_path = Path(all_in_one_data_path)
-    init_df = joblib.load(all_in_one_data_path)
-    init_df = init_df.set_index("name")
-    labels = ["thermal", "solvent", "water"]
-    for label in labels:
-        # Extract
-        valid_rows = init_df.loc[:, label].notna()
-        prep_df = init_df.loc[valid_rows, :]
+    print(f"Processing {label_col} data from {csv_path}")
 
-        # Remove unused label columns
-        label_col = prep_df.pop(label)
-        prep_df = prep_df.iloc[:, 2:]
-        prep_df = pd.concat([label_col, prep_df], axis=1)
+    # Load and clean
+    df = pd.read_csv(csv_path)
+    df = df.drop(columns=[col for col in drop_cols if col in df.columns])
+    df = df.rename(columns=rename_map)
 
-        # Remove additional columns for water stability data
-        if label == "water":
-            water_additional_drops = [
-                "D_lc-I-0-all",
-                "D_lc-I-1-all",
-                "D_lc-I-2-all",
-                "D_lc-I-3-all",
-                "D_lc-S-0-all",
-                "D_mc-Z-0-all",
-                "POAV",
-                "PONAV",
-                "cell_v",
-                "lc-I-0-all",
-                "mc-I-0-all",
-            ]
-            prep_df = prep_df.drop(water_additional_drops, axis=1)
-            file_path = data_dir / "water_and_haz" / f"{label}_split_data.pkl"
-            joblib.dump(prep_df, file_path)
-        # Save to file
-        else:
-            file_path = data_dir / label / f"{label}_split_data.pkl"
-            joblib.dump(prep_df, file_path)
+    # Filter out rows with missing label
+    initial_count = len(df)
+    df = df.dropna(subset=[label_col])
+    print(f"  {label_col.capitalize()}: Kept {len(df)}/{initial_count} rows with valid labels")
 
+    # Validate
+    if not validate_dataframe_columns(df, ["name", label_col]):
+        raise ValueError(f"{label_col.capitalize()} data missing required columns")
 
-def merge_data(
-    thermal_data_path: Path,
-    solvent_data_path: Path,
-    water_data_path: Path,
-    saved_file_path: Path,
-    saved_cols_path: Path,
-):
-    """merge_data
-    Merge the data used for model training
-    1. Extracts solvent, thermal, and water stability data.
-    2. Drop unused columns and rename columns
-    3. Reorganize existing columns
-    """
+    # Set name as index and move label to first column
+    df = df.set_index("name")
+    label_data = df.pop(label_col)
+    df.insert(0, label_col, label_data)
 
-    thermal_df = pd.read_csv(thermal_data_path)
-    solvent_df = pd.read_csv(solvent_data_path)
-    water_df = pd.read_csv(water_data_path)
-
-    thermal_drop_cols = ["filename", "0", "CoRE_name", "name"]  # "refcode"
-    solvent_drop_cols = [
-        "Unnamed: 0",
-        "doi",
-        "filename",
-        "0",
-        "CoRE_name",
-        "name",
-    ]  # "refcode"
-    water_drop_cols = ["acid_label", "base_label", "boiling_label", "data_set"]
-
-    thermal_df = thermal_df.loc[:, ~thermal_df.columns.isin(thermal_drop_cols)]
-    solvent_df = solvent_df.loc[:, ~solvent_df.columns.isin(solvent_drop_cols)]
-    water_df = water_df.loc[:, ~water_df.columns.isin(water_drop_cols)]
-
-    thermal_df = thermal_df.rename(columns={"refcode": "name", "T": "thermal"})
-    solvent_df = solvent_df.rename(columns={"refcode": "name", "flag": "solvent"})
-    water_df = water_df.rename(columns={"MOF_name": "name", "water_label": "water"})
-
-    # Merge
-    thermal_df = thermal_df.set_index("name")
-    solvent_df = solvent_df.set_index("name")
-    water_df = water_df.set_index("name")
-    merged_df = thermal_df.combine_first(solvent_df)
-    merged_df = merged_df.combine_first(water_df)
-    merged_df = merged_df.reset_index()
-
-    # Label columns go first
-    label_cols = ["name", "thermal", "solvent", "water"]
-    labels_df = merged_df[label_cols]
-    other_df = merged_df.drop(columns=label_cols)
-    merged_df = pd.concat([labels_df, other_df], axis=1)
-
-    # Clean empty features
-    merged_drop_cols = [
-        "D_func-I-0-all",
-        "D_func-I-1-all",
-        "D_func-I-2-all",
-        "D_func-I-3-all",
-        "D_func-S-0-all",
-        "D_func-T-0-all",
-        "D_func-Z-0-all",
-        "D_func-alpha-0-all",
-        "D_func-chi-0-all",
-        "D_lc-T-0-all",
-        "D_lc-Z-0-all",
-        "D_lc-alpha-0-all",
-        "D_lc-chi-0-all",
-        "D_mc-I-0-all",
-        "D_mc-I-1-all",
-        "D_mc-I-2-all",
-        "D_mc-I-3-all",
-        "D_mc-S-0-all",
-        "D_mc-T-0-all",
-        "D_mc-chi-0-all",
-    ]
-    merged_df = merged_df.loc[:, ~merged_df.columns.isin(merged_drop_cols)]
-    print(f"Final dataframe shape: {merged_df.shape}")
-
-    # nan_columns = merged_df.columns[merged_df.isna().any()].tolist()
-    print(f"NaN count (merged): {merged_df.isna().sum().sum()}")
+    # Drop extra columns if specified (e.g., water-model-specific columns)
+    if extra_drop_cols:
+        df = df.drop(
+            columns=[col for col in extra_drop_cols if col in df.columns],
+            errors="ignore",
+        )
 
     # Save
-    joblib.dump(merged_df.columns, saved_cols_path)
-    joblib.dump(merged_df, saved_file_path)
-    print(f"File saved to {saved_file_path}")
+    joblib.dump(df, output_path)
+    print(f"  Saved: {df.shape} → {output_path}")
 
+    return df
+
+
+def prepare_thermal_data(
+    thermal_csv_path: Path,
+    output_path: Path,
+) -> pd.DataFrame:
+    """Prepare thermal stability training data from CSV.
+
+    Args:
+        thermal_csv_path: Path to thermal_all_data.csv
+        output_path: Path to save thermal_clean_data.pkl
+
+    Returns:
+        Cleaned DataFrame ready for training
+    """
+    return _prepare_model_data(
+        csv_path=thermal_csv_path,
+        output_path=output_path,
+        drop_cols=THERMAL_DROP_COLS,
+        rename_map=THERMAL_RENAME_MAP,
+        label_col="thermal",
+    )
+
+
+def prepare_solvent_data(
+    solvent_csv_path: Path,
+    output_path: Path,
+) -> pd.DataFrame:
+    """Prepare solvent stability training data from CSV.
+
+    Args:
+        solvent_csv_path: Path to solvent_all_data.csv
+        output_path: Path to save solvent_clean_data.pkl
+
+    Returns:
+        Cleaned DataFrame ready for training
+    """
+    return _prepare_model_data(
+        csv_path=solvent_csv_path,
+        output_path=output_path,
+        drop_cols=SOLVENT_DROP_COLS,
+        rename_map=SOLVENT_RENAME_MAP,
+        label_col="solvent",
+    )
+
+
+def prepare_water_data(
+    water_csv_path: Path,
+    output_path: Path,
+) -> pd.DataFrame:
+    """Prepare water stability training data from CSV.
+
+    Args:
+        water_csv_path: Path to water_and_haz_all_data.csv
+        output_path: Path to save water_clean_data.pkl
+
+    Returns:
+        Cleaned DataFrame ready for training
+    """
+    return _prepare_model_data(
+        csv_path=water_csv_path,
+        output_path=output_path,
+        drop_cols=WATER_DROP_COLS,
+        rename_map=WATER_RENAME_MAP,
+        label_col="water",
+        extra_drop_cols=WATER_MODEL_DROP_COLS,
+    )
+
+
+def prepare_all_training_data(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Prepare all training data from source CSVs.
+
+    Args:
+        data_dir: Root data directory containing subdirectories
+
+    Returns:
+        Tuple of (thermal_df, solvent_df, water_df)
+    """
+    data_dir = Path(data_dir)
+
+    # Define paths
+    thermal_csv = data_dir / "thermal" / "thermal_all_data.csv"
+    solvent_csv = data_dir / "solvent" / "solvent_all_data.csv"
+    water_csv = data_dir / "water_and_haz" / "water_and_haz_all_data.csv"
+
+    thermal_out = data_dir / "thermal" / "thermal_clean_data.pkl"
+    solvent_out = data_dir / "solvent" / "solvent_clean_data.pkl"
+    water_out = data_dir / "water_and_haz" / "water_clean_data.pkl"
+
+    # Validate inputs exist
+    for csv_path in [thermal_csv, solvent_csv, water_csv]:
+        if not csv_path.exists():
+            raise FileNotFoundError(f"Required CSV not found: {csv_path}")
+
+    print("=" * 70)
+    print("PREPARING TRAINING DATA")
+    print("=" * 70)
+
+    # Process each dataset
+    thermal_df = prepare_thermal_data(thermal_csv, thermal_out)
+    solvent_df = prepare_solvent_data(solvent_csv, solvent_out)
+    water_df = prepare_water_data(water_csv, water_out)
+
+    # Summary
+    print("\n" + "=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print(f"Thermal:  {thermal_df.shape[0]} MOFs × {thermal_df.shape[1]} features")
+    print(f"Solvent:  {solvent_df.shape[0]} MOFs × {solvent_df.shape[1]} features")
+    print(f"Water:    {water_df.shape[0]} MOFs × {water_df.shape[1]} features")
+    print(f"\nNaN check:")
+    print(f"  Thermal: {thermal_df.isna().sum().sum()} NaN values")
+    print(f"  Solvent: {solvent_df.isna().sum().sum()} NaN values")
+    print(f"  Water:   {water_df.isna().sum().sum()} NaN values")
+    print("=" * 70)
+
+    return thermal_df, solvent_df, water_df
+
+
+def get_feature_column_names(split_data_path: Path) -> list:
+    """Get feature column names from a data file.
+
+    Args:
+        split_data_path: Path to any data pkl file
+
+    Returns:
+        List of feature column names (excludes label columns)
+    """
+    df = joblib.load(split_data_path)
+    return get_feature_columns(df.columns.tolist())
+
+# ============================================================================
+# MAIN
+# ============================================================================
 
 if __name__ == "__main__":
-    print("**Data Selection**")
+    print("\n" + "=" * 70)
+    print("DATA SELECTION")
+    print("=" * 70 + "\n")
+
     project_path = Path(".")
     data_dir = project_path / "data"
-    all_in_one_pkl = data_dir / "all_in_one.pkl"
-    all_cols_pkl = data_dir / "all_in_one_cols.pkl"
 
-    # Reorganize data
-    if not all_in_one_pkl.is_file():
-        thermal_path = data_dir / "thermal" / "thermal_all_data.csv"
-        solvent_path = data_dir / "solvent" / "solvent_all_data.csv"
-        water_path = data_dir / "water_and_haz" / "data.csv"
-        merge_data(thermal_path, solvent_path, water_path, all_in_one_pkl, all_cols_pkl)
-        split_data(data_dir, all_in_one_pkl)
-    else:
-        print(f"Warning: data exists at {all_in_one_pkl}")
+    try:
+        # Prepare all training data
+        prepare_all_training_data(data_dir)
 
-    # Check data integrity
-    thermal_pkl_path = data_dir / "thermal" / "thermal_split_data.pkl"
-    solvent_pkl_path = data_dir / "solvent" / "solvent_split_data.pkl"
-    water_pkl_path = data_dir / "water_and_haz" / "water_split_data.pkl"
+        # Validate outputs
+        print("\n" + "=" * 70)
+        print("VALIDATION")
+        print("=" * 70)
 
-    thermal_df = joblib.load(thermal_pkl_path)
-    solvent_df = joblib.load(solvent_pkl_path)
-    water_df = joblib.load(water_pkl_path)
+        thermal_df = joblib.load(data_dir / "thermal" / "thermal_clean_data.pkl")
+        solvent_df = joblib.load(data_dir / "solvent" / "solvent_clean_data.pkl")
+        water_df = joblib.load(data_dir / "water_and_haz" / "water_clean_data.pkl")
 
-    print(
-        f"NaN count (split): \n"
-        + f"- Thermal: {thermal_df.isna().sum().sum()}\n"
-        + f"- Solvent: {solvent_df.isna().sum().sum()}\n"
-        + f"- Water: {water_df.isna().sum().sum()}"
-    )
-    print("**Exit Data Selection**")
+        print(f"✓ Thermal data loaded: {thermal_df.shape}")
+        print(f"✓ Solvent data loaded: {solvent_df.shape}")
+        print(f"✓ Water data loaded: {water_df.shape}")
+
+        # Get feature columns
+        feature_cols = get_feature_column_names(
+            data_dir / "thermal" / "thermal_clean_data.pkl"
+        )
+        print(f"\n✓ Total feature columns: {len(feature_cols)}")
+
+        print("\n" + "=" * 70)
+        print("SUCCESS: All training data prepared")
+        print("=" * 70)
+
+    except Exception as e:
+        print(f"\n✗ ERROR: {e}")
+        raise

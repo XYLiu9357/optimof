@@ -68,11 +68,20 @@ def extract_from_file(
 ) -> pd.DataFrame:
     extracted_df = extract_features(project_path, target_path, id)
     extracted_df.loc[:, "name"] = id
-    all_cols = joblib.load(project_path / "data" / "all_in_one_cols.pkl")
 
-    # Extract feature columns (by removing label columns in stored data)
-    label_cols = ["thermal", "solvent", "water"]
-    feature_cols = [col for col in all_cols if col not in label_cols]
+    # Get expected feature columns from existing clean data
+    # (No longer need separate all_in_one_cols.pkl file)
+    thermal_clean_path = project_path / "data" / "thermal" / "thermal_clean_data.pkl"
+    if thermal_clean_path.exists():
+        reference_df = joblib.load(thermal_clean_path)
+        # Get all columns except the thermal label
+        feature_cols = [col for col in reference_df.columns if col != "thermal"]
+    else:
+        # Fallback: use all columns except known labels
+        label_cols = ["thermal", "solvent", "water"]
+        feature_cols = [col for col in extracted_df.columns if col not in label_cols]
+
+    # Filter to only the feature columns
     feature_df = extracted_df.loc[:, feature_cols]
     feature_df = feature_df.set_index("name")
     return feature_df
@@ -157,7 +166,7 @@ def get_ground_truth(data_path, lookup_df):
 def predict_df(project_path: Path, feature_df: pd.DataFrame):
     project_path = Path(project_path)
     model_dir = project_path / "model"
-    scalar_dir = model_dir / "preprocess"
+    scalar_dir = model_dir / "scalers"
 
     # # Check if there is a ground truth match
     # data_path = project_path / "data" / "all_in_one.pkl"
@@ -229,7 +238,7 @@ def fill_all_unknown(project_path: Path, data_path: Path) -> pd.DataFrame:
 
     # Make path strings
     model_dir = project_path / "model"
-    scalar_dir = model_dir / "preprocess"
+    scalar_dir = model_dir / "scalers"
     thermal_model_path = model_dir / "thermal_model.pkl"
     thermal_scalar_path = scalar_dir / "thermal_scalar.pkl"
     solvent_model_path = model_dir / "solvent_model.pkl"
