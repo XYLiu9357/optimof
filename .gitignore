@@ -8,8 +8,10 @@ targets
 performance/
 **/*clean_data.pkl
 **/*test_data.pkl
+model/structure/*structure.json
 model/scalers/
 model/*model.pkl
+*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

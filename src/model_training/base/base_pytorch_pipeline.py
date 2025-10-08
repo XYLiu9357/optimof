@@ -101,11 +101,14 @@ class BasePyTorchPipeline(ABC):
         """
         pass
 
-    def train(self, val_size: float = VAL_SIZE) -> None:
+    def train(self, val_size: float = VAL_SIZE) -> float:
         """Train the model.
 
         Args:
             val_size: Fraction of training data to use for validation
+
+        Returns:
+            Best validation loss achieved during training
         """
         if self.model is None:
             raise ValueError("Model must be built before training")
@@ -150,9 +153,16 @@ class BasePyTorchPipeline(ABC):
 
         # Loss function and optimizer
         criterion = self._get_loss_function()
-        optimizer = optim.Adam(
-            self.model.parameters(), lr=self.training_config.learning_rate
-        )
+
+        # Select optimizer based on config
+        if self.training_config.optimizer == 'adamw':
+            optimizer = optim.AdamW(
+                self.model.parameters(), lr=self.training_config.learning_rate
+            )
+        else:  # default to adam
+            optimizer = optim.Adam(
+                self.model.parameters(), lr=self.training_config.learning_rate
+            )
 
         # Early stopping
         best_val_loss = float("inf")
@@ -210,6 +220,8 @@ class BasePyTorchPipeline(ABC):
             print("No improvement during training")
 
         print("**Training Complete**")
+
+        return best_val_loss
 
     @abstractmethod
     def _get_loss_function(self) -> nn.Module:

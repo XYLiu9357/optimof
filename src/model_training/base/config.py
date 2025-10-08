@@ -14,6 +14,8 @@ class ModelConfig:
     hidden_layers: List[int]
     output_size: int
     dropout_prob: float = 0.2
+    arch_type: str = 'simple'  # 'simple', 'batchnorm', or 'residual'
+    activation: str = 'leaky_relu'  # 'relu', 'leaky_relu', or 'elu'
 
     @classmethod
     def from_json(cls, json_path: Path) -> "ModelConfig":
@@ -35,9 +37,10 @@ class ModelConfig:
             "output_size": config_dict["output_size"],
         }
 
-        # Add dropout_prob if present, otherwise use default
-        if "dropout_prob" in config_dict:
-            model_config["dropout_prob"] = config_dict["dropout_prob"]
+        # Add optional fields if present
+        for optional_field in ["dropout_prob", "arch_type", "activation"]:
+            if optional_field in config_dict:
+                model_config[optional_field] = config_dict[optional_field]
 
         return cls(**model_config)
 
@@ -65,6 +68,7 @@ class TrainingConfig:
     batch_size: int
     num_epochs: int
     patience: int
+    optimizer: str = 'adam'  # 'adam' or 'adamw'
 
     @classmethod
     def from_json(cls, json_path: Path) -> "TrainingConfig":
@@ -78,9 +82,16 @@ class TrainingConfig:
         """
         with open(json_path, "r") as f:
             config_dict = json.load(f)
-        return cls(
-            learning_rate=config_dict["learning_rate"],
-            batch_size=config_dict["batch_size"],
-            num_epochs=config_dict["num_epochs"],
-            patience=config_dict["patience"],
-        )
+
+        training_config = {
+            "learning_rate": config_dict["learning_rate"],
+            "batch_size": config_dict["batch_size"],
+            "num_epochs": config_dict["num_epochs"],
+            "patience": config_dict["patience"],
+        }
+
+        # Add optional optimizer field
+        if "optimizer" in config_dict:
+            training_config["optimizer"] = config_dict["optimizer"]
+
+        return cls(**training_config)

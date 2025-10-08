@@ -23,9 +23,15 @@ help:
 	@echo "    check-features     - Check extracted features"
 	@echo "    preprocess         - Run data preprocessing"
 	@echo ""
+	@echo "  Hyperparameter Tuning:"
+	@echo "    tune-thermal       - Tune thermal stability model (use TRIALS=N)"
+	@echo "    tune-solvent       - Tune solvent removal stability model (use TRIALS=N)"
+	@echo "    tune-water         - Tune water stability model (use TRIALS=N)"
+	@echo "    tune-all           - Tune all models"
+	@echo ""
 	@echo "  Model Training:"
-	@echo "    train-thermal      - Train thermal stability model"
-	@echo "    train-solvent      - Train solvent removal stability model"
+	@echo "    train-thermal      - Train thermal stability model (use STRUCTURE=path)"
+	@echo "    train-solvent      - Train solvent removal stability model (use STRUCTURE=path)"
 	@echo "    train-water        - Train water stability model"
 	@echo "    train-all          - Train all models"
 	@echo ""
@@ -74,14 +80,38 @@ check-features:
 preprocess:
 	python -m src.model_features.preprocess
 
+# Hyperparameter tuning
+.PHONY: tune-thermal
+tune-thermal:
+	python -m src.model_training.tune_thermal --n-trials $(or $(TRIALS),50)
+
+.PHONY: tune-solvent
+tune-solvent:
+	python -m src.model_training.tune_solvent --n-trials $(or $(TRIALS),50)
+
+.PHONY: tune-water
+tune-water:
+	python -m src.model_training.tune_water --n-trials $(or $(TRIALS),50)
+
+.PHONY: tune-all
+tune-all: tune-thermal tune-solvent tune-water
+
 # Model training
 .PHONY: train-thermal
 train-thermal:
+ifdef STRUCTURE
+	python -m src.model_training.thermal_model --structure $(STRUCTURE)
+else
 	python -m src.model_training.thermal_model
+endif
 
 .PHONY: train-solvent
 train-solvent:
+ifdef STRUCTURE
+	python -m src.model_training.solvent_model --structure $(STRUCTURE)
+else
 	python -m src.model_training.solvent_model
+endif
 
 .PHONY: train-water
 train-water:

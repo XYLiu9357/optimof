@@ -15,7 +15,7 @@ from src.config.paths import (
 )
 from src.model_training.base.data_processor import DataProcessor
 from src.model_training.base.evaluator import BinaryClassificationEvaluator
-from src.model_training.solvent_model import SolventModel  # Import for unpickling
+from src.model_training.base.flexible_mlp import FlexibleMLP  # Import for unpickling
 
 
 def evaluate_solvent_model():

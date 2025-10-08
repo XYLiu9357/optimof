@@ -5,12 +5,9 @@ should be invoked prior to running this training script.
 Task: Binary classification
 Predictor: MOF geometric information found using Zeo++
 Predictand: MOF stability upon solvent removal
-
-* The model only uses fully connected layers for simplification.
 """
 
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 import torch.nn as nn
@@ -23,47 +20,7 @@ from src.config.paths import (
 )
 from src.model_training.base.base_pytorch_pipeline import BasePyTorchPipeline
 from src.model_training.base.config import ModelConfig, TrainingConfig
-
-
-class SolventModel(nn.Module):
-    """Solvent ANN Model.
-
-    ANN model that inherits PyTorch neural network module.
-
-    Attributes:
-        graph_depth: int, depth of the computation graph
-        layers: List[nn.Linear], a list of network layers used in prediction
-        dropout: Dropout layer for regularization
-    """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_layer_sizes: List[int],
-        output_size: int,
-        dropout_prob: float = 0.2,
-    ):
-        super(SolventModel, self).__init__()
-
-        layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
-        self.graph_depth: int = len(layer_sizes)
-        self.layers = nn.ModuleList(
-            [
-                nn.Linear(layer_sizes[i], layer_sizes[i + 1])
-                for i in range(self.graph_depth - 1)
-            ]
-        )
-
-        self.dropout = nn.Dropout(dropout_prob)
-
-    def forward(self, x):
-        for i, layer in enumerate(self.layers):
-            x = layer(x)
-            # No ReLU at the last layer
-            if i < len(self.layers) - 1:
-                x = nn.functional.relu(x)
-                x = self.dropout(x)
-        return x  # Raw logits for BCEWithLogitsLoss
+from src.model_training.base.flexible_mlp import FlexibleMLP
 
 
 class SolventPipeline(BasePyTorchPipeline):
@@ -108,10 +65,10 @@ class SolventPipeline(BasePyTorchPipeline):
         return normalized
 
     def build_model(self) -> nn.Module:
-        """Build the solvent model.
+        """Build the solvent model using FlexibleMLP.
 
         Returns:
-            SolventModel instance
+            FlexibleMLP instance
         """
         # Validate config
         assert self.model_config.output_size == 1, "Solvent model output size must be 1"
@@ -120,11 +77,13 @@ class SolventPipeline(BasePyTorchPipeline):
                 self.model_config.input_size == self.train_features.shape[1]
             ), f"Input size mismatch: config={self.model_config.input_size}, data={self.train_features.shape[1]}"
 
-        self.model = SolventModel(
-            self.model_config.input_size,
-            self.model_config.hidden_layers,
-            self.model_config.output_size,
-            self.model_config.dropout_prob,
+        self.model = FlexibleMLP(
+            input_size=self.model_config.input_size,
+            hidden_layers=self.model_config.hidden_layers,
+            output_size=self.model_config.output_size,
+            dropout_prob=self.model_config.dropout_prob,
+            arch_type=self.model_config.arch_type,
+            activation=self.model_config.activation,
         )
         self.model.to(self.device)
         return self.model
@@ -139,17 +98,37 @@ class SolventPipeline(BasePyTorchPipeline):
 
 
 if __name__ == "__main__":
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(
+        description="Train solvent removal stability prediction model"
+    )
+    parser.add_argument(
+        "--structure",
+        type=str,
+        default="model/structure/solvent_pytorch_structure.json",
+        help="Path to structure file from hyperparameter tuning",
+    )
+    args = parser.parse_args()
+
     # File paths
     data_file_path = SOLVENT_DATA_DIR / "solvent_clean_data.pkl"
-    hyperparam_file_path = MODEL_DIR / "solvent_hyperparams.json"
+    structure_file_path = Path(args.structure)
     model_file_path = MODEL_DIR / "solvent_model.pkl"
     scaler_file_path = SCALER_DIR / "solvent_scaler.pkl"
     test_data_path = SOLVENT_DATA_DIR / "solvent_test_data.pkl"
 
-    # Load configurations
-    print("**Reading hyperparameter config**")
-    model_config = ModelConfig.from_json(hyperparam_file_path)
-    training_config = TrainingConfig.from_json(hyperparam_file_path)
+    # Load configurations from structure file
+    print(f"**Reading structure from {structure_file_path}**")
+    with open(structure_file_path, "r") as f:
+        structure = json.load(f)
+
+    model_config = ModelConfig(**structure["architecture"])
+    training_config = TrainingConfig(**structure["training"])
+
+    print(f"Architecture: {structure['architecture']}")
+    print(f"Training config: {structure['training']}")
 
     # Create pipeline
     pipeline = SolventPipeline(model_config, training_config)

@@ -15,7 +15,7 @@ from src.config.paths import (
 )
 from src.model_training.base.data_processor import DataProcessor
 from src.model_training.base.evaluator import RegressionEvaluator
-from src.model_training.thermal_model import ThermalModel  # Import for unpickling
+from src.model_training.base.flexible_mlp import FlexibleMLP  # Import for unpickling
 
 
 def evaluate_thermal_model():
