@@ -50,6 +50,9 @@ make format
 # Extract features from a single CIF file
 make extract-feature ARGS="--cif path/to/structure.cif"
 
+# Tune hyperparameters (optional, uses Optuna)
+make tune-all
+
 # Train all models
 make train-all
 
@@ -57,7 +60,7 @@ make train-all
 make test-all
 ```
 
-See `make help` for all available commands.
+See `make help` for all available commands. See [tuning](doc/tuning.md) for more on hyperparameter tuning.
 
 ## Acknowledgements
 
