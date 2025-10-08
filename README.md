@@ -1,6 +1,6 @@
 # OptiMOF
 
-**Metal-Organic Framework screening and stability prediction powered by machine learning.**
+Metal-Organic Framework screening and stability prediction powered by machine learning.
 
 ## Overview
 
