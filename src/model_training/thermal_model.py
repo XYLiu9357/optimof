@@ -9,24 +9,25 @@ Predictand: MOF breakdown temperature
 * The model only uses fully connected layers for simplification.
 """
 
-import json
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
-import joblib
-import pandas as pd
-import torch
 import torch.nn as nn
-import torch.optim as optim
-from sklearn.model_selection import train_test_split as sklearn_train_test_split
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader, TensorDataset
+
+from src.config.constants import THERMAL_LABEL
+from src.config.paths import (
+    MODEL_DIR,
+    SCALER_DIR,
+    THERMAL_DATA_DIR,
+)
+from src.model_training.base.base_pytorch_pipeline import BasePyTorchPipeline
+from src.model_training.base.config import ModelConfig, TrainingConfig
 
 
-# Model class
 class ThermalModel(nn.Module):
-    """Thermal ANN Model
-    ANN model that inherits PyTorch neural network module
+    """Thermal ANN Model.
+
+    ANN model that inherits PyTorch neural network module.
 
     Attributes:
         graph_depth: int, depth of the computation graph
@@ -56,252 +57,74 @@ class ThermalModel(nn.Module):
         return x
 
 
-# Pipeline class
-class ThermalModelPipeline:
-    """Thermal ANN Model Pipeline
-    Pipeline class that encapsulates the building, training, testing, and
-    saving of the thermal ANN model
-
-    Attributes:
-        project_path: str, root directory of project
-        hyperparams: Dict, a dictionary that contains all the hyperparameters
-        device: torch.device, device used for computation
-
-        model_input_features: np.ndarray, features used for training and validation
-        model_input_labels: np.ndarray, labels used for training and validation
-        test_features: np.ndarray, features used for testing
-        test_labels: np.ndarray, labels used for testing
-
-        model: ThermalModel, the ANN model used for prediction
-    """
+class ThermalPipeline(BasePyTorchPipeline):
+    """Pipeline for training thermal stability prediction model."""
 
     def __init__(
-        self,
-        project_path: Path,
-        hyperparams: Dict,
-        all_df: pd.DataFrame,
-        save=True,
-    ):
-        # Store attributes
-        self.project_path: Path = Path(project_path)
-        self.hyperparams: Dict = hyperparams
-        self.train_test_split(all_df, test_size=0.2)
+        self, model_config: ModelConfig, training_config: TrainingConfig
+    ) -> None:
+        """Initialize thermal model pipeline.
 
-        # Scale features to normal distribution
-        self.fit_scalar()
-        self.model_input_features = self.data_transform(self.model_input_features)
-        self.test_features = self.data_transform(self.test_features)
+        Args:
+            model_config: Model architecture configuration
+            training_config: Training hyperparameter configuration
+        """
+        super().__init__(model_config, training_config, label_col=THERMAL_LABEL)
 
-        # Device setup: use GPU if possible
-        device: torch.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+    def build_model(self) -> nn.Module:
+        """Build the thermal model.
+
+        Returns:
+            ThermalModel instance
+        """
+        # Validate config
+        assert self.model_config.output_size == 1, "Thermal model output size must be 1"
+        if self.train_features is not None:
+            assert (
+                self.model_config.input_size == self.train_features.shape[1]
+            ), f"Input size mismatch: config={self.model_config.input_size}, data={self.train_features.shape[1]}"
+
+        self.model = ThermalModel(
+            self.model_config.input_size,
+            self.model_config.hidden_layers,
+            self.model_config.output_size,
         )
-        self.device = device
+        self.model.to(self.device)
+        return self.model
 
-        # Build model
-        self.model_build()
-        self.model.to(device)
+    def _get_loss_function(self) -> nn.Module:
+        """Get MSE loss function for regression.
 
-        # Train model
-        print("**Starting Training**")
-        self.model_train(val_size=0.1)
-        print("**Training Complete**")
-
-        # Save model if specified
-        if save:
-            model_file_path = self.project_path / "model" / "thermal_model.pkl"
-            torch.save(self.model, model_file_path)
-            print("**Model saved**")
-
-    # Fit the scalar to the training set
-    def fit_scalar(self):
-        self.scalar = StandardScaler()
-        self.scalar.fit(self.model_input_features)
-
-        # Save scalar
-        scalar_file_path = (
-            self.project_path / "model" / "scalers" / "thermal_scalar.pkl"
-        )
-        joblib.dump(self.scalar, scalar_file_path)
-
-    # Transform input data
-    def data_transform(self, input_df):
-        ndarray_output = self.scalar.transform(input_df)
-        return pd.DataFrame(ndarray_output, columns=input_df.columns)
-
-    # Split data set into training and testing set
-    def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
-        all_features = all_df.loc[:, all_df.columns != "thermal"]
-        all_labels = all_df.loc[:, "thermal"]
-        (
-            self.model_input_features,
-            self.test_features,
-            self.model_input_labels,
-            self.test_labels,
-        ) = sklearn_train_test_split(
-            all_features, all_labels, test_size=test_size, random_state=0
-        )
-
-        # Reset indices to ensure alignment
-        self.test_features = self.test_features.reset_index(drop=True)
-        self.test_labels = self.test_labels.reset_index(drop=True)
-
-    # Build the model with the specified hyperparameters
-    def model_build(self):
-        # The last layer of hidden_layer_sizes is the output layer size
-        input_size: int = self.hyperparams["input_size"]
-        intermediate_sizes: List[int] = self.hyperparams["hidden_layers"]
-        output_size: int = self.hyperparams["output_size"]
-
-        # Check hyperparameter validity
-        assert input_size == self.model_input_features.shape[1]
-        assert output_size == 1
-
-        # Construct model
-        self.model: ThermalModel = ThermalModel(
-            input_size, intermediate_sizes, output_size
-        )
-
-    # Train the model
-    def model_train(self, val_size=0.1):
-        # Extract relevant hyperparameters
-        learning_rate = self.hyperparams["learning_rate"]
-        batch_size = self.hyperparams["batch_size"]
-        num_epochs = self.hyperparams["num_epochs"]
-        patience = self.hyperparams["patience"]
-
-        # Split input into training set and validation set
-        train_features, val_features, train_labels, val_labels = (
-            sklearn_train_test_split(
-                self.model_input_features,
-                self.model_input_labels,
-                test_size=val_size,
-                random_state=0,
-            )
-        )
-
-        # Ensure all data is numeric and handle NaN values
-        train_features = train_features.apply(pd.to_numeric, errors="raise")
-        val_features = val_features.apply(pd.to_numeric, errors="raise")
-        train_labels = train_labels.apply(pd.to_numeric, errors="raise")
-        val_labels = val_labels.apply(pd.to_numeric, errors="raise")
-
-        # Prepare tensor data set.
-        tensor_train_features = torch.tensor(train_features.values, dtype=torch.float32)
-        tensor_val_features = torch.tensor(val_features.values, dtype=torch.float32)
-        tensor_train_labels = torch.tensor(
-            train_labels.values, dtype=torch.float32
-        ).unsqueeze(1)
-        tensor_val_labels = torch.tensor(
-            val_labels.values, dtype=torch.float32
-        ).unsqueeze(1)
-        # Added one dimension to ensure correct shape
-
-        train_dataset = TensorDataset(tensor_train_features, tensor_train_labels)
-        val_dataset = TensorDataset(tensor_val_features, tensor_val_labels)
-
-        # Build training and validation data loader
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-        # Loss function and optimizer
-        criterion = nn.MSELoss()
-        optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-
-        # Early stopping
-        best_val_loss = float("inf")
-        epochs_no_improve = 0
-        best_model = None
-
-        # Training loop: move batches to GPU during training
-        for epoch in range(num_epochs):
-            # Train
-            self.model.train()
-            for X_batch, y_batch in train_loader:
-                X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
-                outputs = self.model(X_batch)
-                cur_loss = criterion(outputs, y_batch)
-
-                optimizer.zero_grad()
-                cur_loss.backward()
-                optimizer.step()
-
-            # Validation loop
-            self.model.eval()
-            val_loss = 0
-
-            # Disable gradient calculations to save memory, just in case...
-            with torch.no_grad():
-                for X_batch, y_batch in val_loader:
-                    X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
-                    outputs = self.model(X_batch)
-                    cur_loss = criterion(outputs, y_batch)
-                    val_loss += cur_loss.item()
-
-            # Print validation loss
-            val_loss /= len(val_loader.dataset)
-            print(
-                f"Epoch {epoch+1}/{num_epochs}, Loss: {cur_loss.item():.4f}, Val Loss: {val_loss:.4f}"
-            )
-
-            # Check if validation loss is improved - early stopping
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                epochs_no_improve = 0
-                best_model = self.model.state_dict()
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= patience:
-                    print("Early stopping")
-                    break
-
-        # Load the best model
-        if best_model is not None:
-            self.model.load_state_dict(best_model)
-            print("Loaded best model with validation loss:", best_val_loss)
-        else:
-            print("No improvement during training")
-
-    # Return test features and labels, for benchmarking
-    def get_test_data(self):
-        has_nan_features = self.test_features.isna().any().any()
-        has_nan_labels = self.test_labels.isna().any().any()
-        print(f"Any NaN test features: {has_nan_features}")
-        print(f"Any NaN test labels: {has_nan_labels}")
-        return self.test_features, self.test_labels
+        Returns:
+            MSE loss function
+        """
+        return nn.MSELoss()
 
 
 if __name__ == "__main__":
-    # File configs
-    project_path = Path(".")
-    hyperparam_file_name = "thermal_hyperparams.json"
-    data_dir = project_path / "data" / "thermal"
-    data_file_path = data_dir / "thermal_clean_data.pkl"
+    # File paths
+    data_file_path = THERMAL_DATA_DIR / "thermal_clean_data.pkl"
+    hyperparam_file_path = MODEL_DIR / "thermal_hyperparams.json"
+    model_file_path = MODEL_DIR / "thermal_model.pkl"
+    scaler_file_path = SCALER_DIR / "thermal_scaler.pkl"
+    test_data_path = THERMAL_DATA_DIR / "thermal_test_data.pkl"
 
-    # Read data: train on all features
-    # removed_cols: List[str] = ["filename", "0", "CoRE_name", "refcode", "name"]
-    thermal_all_df: pd.DataFrame = joblib.load(data_file_path)
-    # thermal_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
-
-    # Read hyperparameters
+    # Load configurations
     print("**Reading hyperparameter config**")
-    hyperparam_file_path = project_path / "model" / hyperparam_file_name
-    with open(hyperparam_file_path, "r") as f:
-        hyperparams: Dict = json.load(f)
+    model_config = ModelConfig.from_json(hyperparam_file_path)
+    training_config = TrainingConfig.from_json(hyperparam_file_path)
 
-    # Create, build, and train the model
-    pipeline: ThermalModelPipeline = ThermalModelPipeline(
-        project_path, hyperparams, thermal_all_df
-    )
+    # Create pipeline
+    pipeline = ThermalPipeline(model_config, training_config)
 
-    # Use test features and labels to benchmark performance
-    model_file_name = "thermal_model.pkl"
-    model_file_path = project_path / "model" / model_file_name
-    test_features, test_labels = pipeline.get_test_data()
-    test_all = pd.concat([test_labels, test_features], axis=1)
+    # Prepare data
+    pipeline.prepare_data(data_file_path, scaler_file_path)
 
-    # Save unused test data for future testing
-    print(f"**Model saved at {model_file_path}**")
-    test_data_path = data_dir / "thermal_test_data.pkl"
-    test_all.to_pickle(test_data_path)
-    print(f"**Test data saved at {test_data_path}**")
+    # Build model
+    pipeline.build_model()
+
+    # Train model
+    pipeline.train()
+
+    # Save model and test data
+    pipeline.save(model_file_path, test_data_path)

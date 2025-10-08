@@ -9,28 +9,31 @@ Predictand: MOF stability upon solvent removal
 * The model only uses fully connected layers for simplification.
 """
 
-import json
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
-import joblib
 import pandas as pd
-import torch
 import torch.nn as nn
-import torch.optim as optim
-from sklearn.model_selection import train_test_split as sklearn_train_test_split
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader, TensorDataset
+
+from src.config.constants import SOLVENT_LABEL
+from src.config.paths import (
+    MODEL_DIR,
+    SCALER_DIR,
+    SOLVENT_DATA_DIR,
+)
+from src.model_training.base.base_pytorch_pipeline import BasePyTorchPipeline
+from src.model_training.base.config import ModelConfig, TrainingConfig
 
 
-# Model class
 class SolventModel(nn.Module):
-    """Solvent ANN Model
-    ANN model that inherits PyTorch neural network module
+    """Solvent ANN Model.
+
+    ANN model that inherits PyTorch neural network module.
 
     Attributes:
         graph_depth: int, depth of the computation graph
         layers: List[nn.Linear], a list of network layers used in prediction
+        dropout: Dropout layer for regularization
     """
 
     def __init__(
@@ -51,7 +54,6 @@ class SolventModel(nn.Module):
             ]
         )
 
-        # Set up dropout probability
         self.dropout = nn.Dropout(dropout_prob)
 
     def forward(self, x):
@@ -61,271 +63,105 @@ class SolventModel(nn.Module):
             if i < len(self.layers) - 1:
                 x = nn.functional.relu(x)
                 x = self.dropout(x)
-        return x  # Debug note: use raw logits to avoid double activation
+        return x  # Raw logits for BCEWithLogitsLoss
 
 
-# Pipeline class
-class SolventModelPipeline:
-    """Solvent ANN Model Pipeline
-    Pipeline class that encapsulates the building, training, testing, and
-    saving of the solvent ANN model
-
-    Attributes:
-        project_path: str, root directory of project
-        hyperparams: Dict, a dictionary that contains all the hyperparameters
-        device: torch.device, device used for computation
-
-        model_input_features: np.ndarray, features used for training and validation
-        model_input_labels: np.ndarray, labels used for training and validation
-        test_features: np.ndarray, features used for testing
-        test_labels: np.ndarray, labels used for testing
-
-        model: SolventModel, the ANN model used for prediction
-    """
+class SolventPipeline(BasePyTorchPipeline):
+    """Pipeline for training solvent removal stability prediction model."""
 
     def __init__(
-        self,
-        project_path: Path,
-        hyperparams: Dict,
-        all_df: pd.DataFrame,
-        save=True,
-    ):
-        # Store attributes
-        self.project_path: Path = Path(project_path)
-        self.hyperparams: Dict = hyperparams
-        self.train_test_split(all_df, test_size=0.2)
+        self, model_config: ModelConfig, training_config: TrainingConfig
+    ) -> None:
+        """Initialize solvent model pipeline.
 
-        # Normalize class labels to {0, 1}
-        self.model_input_labels = self.normalize_labels(self.model_input_labels)
-        self.test_labels = self.normalize_labels(self.test_labels)
+        Args:
+            model_config: Model architecture configuration
+            training_config: Training hyperparameter configuration
+        """
+        super().__init__(model_config, training_config, label_col=SOLVENT_LABEL)
 
-        # Scale features to standard normal: prevent numerically large features
-        # from dominating the predictions
-        self.fit_scalar()
-        self.model_input_features = self.data_transform(self.model_input_features)
-        self.test_features = self.data_transform(self.test_features)
+    def prepare_data(self, data_path: Path, scaler_path: Path) -> None:
+        """Load, split, scale data, and normalize labels.
 
-        # Device setup: use GPU if possible
-        device: torch.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+        Args:
+            data_path: Path to data pickle file
+            scaler_path: Path to save/load the scaler
+        """
+        # Call parent method for basic data preparation
+        super().prepare_data(data_path, scaler_path)
+
+        # Normalize labels: convert {-1, 1} to {0, 1}
+        self.train_labels = self._normalize_labels(self.train_labels)
+        self.test_labels = self._normalize_labels(self.test_labels)
+
+    def _normalize_labels(self, labels: pd.Series) -> pd.Series:
+        """Convert {-1, 1} labels to {0, 1} labels.
+
+        Args:
+            labels: Raw labels
+
+        Returns:
+            Normalized labels
+        """
+        normalized = labels.copy()
+        normalized[normalized < 0] = 0
+        return normalized
+
+    def build_model(self) -> nn.Module:
+        """Build the solvent model.
+
+        Returns:
+            SolventModel instance
+        """
+        # Validate config
+        assert self.model_config.output_size == 1, "Solvent model output size must be 1"
+        if self.train_features is not None:
+            assert (
+                self.model_config.input_size == self.train_features.shape[1]
+            ), f"Input size mismatch: config={self.model_config.input_size}, data={self.train_features.shape[1]}"
+
+        self.model = SolventModel(
+            self.model_config.input_size,
+            self.model_config.hidden_layers,
+            self.model_config.output_size,
+            self.model_config.dropout_prob,
         )
-        self.device = device
+        self.model.to(self.device)
+        return self.model
 
-        # Build model
-        self.model_build()
-        self.model.to(device)
+    def _get_loss_function(self) -> nn.Module:
+        """Get BCE with logits loss for binary classification.
 
-        # Train model
-        print("**Starting Training**")
-        self.model_train(val_size=0.1)
-        print("**Training Complete**")
-
-        # Save model if specified
-        if save:
-            model_file_path = self.project_path / "model" / "solvent_model.pkl"
-            torch.save(self.model, model_file_path)
-            print("**Model saved**")
-
-    # Convert {-1, 1} labels to {0, 1} labels
-    def normalize_labels(self, raw_labels: pd.DataFrame):
-        normalized_labels: pd.DataFrame = raw_labels.copy()
-        normalized_labels[normalized_labels < 0] = 0
-        return normalized_labels
-
-    # Fit the scalar to the training set
-    def fit_scalar(self):
-        self.scalar = StandardScaler()
-        self.scalar.fit(self.model_input_features)
-
-        # Save scalar
-        scalar_file_path = (
-            self.project_path / "model" / "scalers" / "solvent_scalar.pkl"
-        )
-        joblib.dump(self.scalar, scalar_file_path)
-
-    # Transform input data
-    def data_transform(self, input_df):
-        ndarray_output = self.scalar.transform(input_df)
-        return pd.DataFrame(ndarray_output, columns=input_df.columns)
-
-    # Split data set into training and testing set
-    def train_test_split(self, all_df: pd.DataFrame, test_size=0.2):
-        all_features = all_df.loc[:, all_df.columns != "solvent"]
-        all_labels = all_df.loc[:, "solvent"]
-        (
-            self.model_input_features,
-            self.test_features,
-            self.model_input_labels,
-            self.test_labels,
-        ) = sklearn_train_test_split(
-            all_features, all_labels, test_size=test_size, random_state=0
-        )
-
-        # Reset indices to ensure alignment
-        self.test_features = self.test_features.reset_index(drop=True)
-        self.test_labels = self.test_labels.reset_index(drop=True)
-
-    # Build the model with the specified hyperparameters
-    def model_build(self):
-        # The last layer of hidden_layer_sizes is the output layer size
-        input_size: int = self.hyperparams["input_size"]
-        intermediate_sizes: List[int] = self.hyperparams["hidden_layers"]
-        output_size: int = self.hyperparams["output_size"]
-
-        # Check hyperparameter validity
-        assert input_size == self.model_input_features.shape[1]
-        assert output_size == 1
-
-        # Construct model
-        self.model: SolventModel = SolventModel(
-            input_size, intermediate_sizes, output_size
-        )
-
-    # Train the model
-    def model_train(self, val_size=0.1):
-        # Extract relevant hyperparameters
-        learning_rate = self.hyperparams["learning_rate"]
-        batch_size = self.hyperparams["batch_size"]
-        num_epochs = self.hyperparams["num_epochs"]
-        patience = self.hyperparams["patience"]
-
-        # Split input into training set and validation set
-        train_features, val_features, train_labels, val_labels = (
-            sklearn_train_test_split(
-                self.model_input_features,
-                self.model_input_labels,
-                test_size=val_size,
-                random_state=0,
-            )
-        )
-
-        # Ensure all data is numeric and handle NaN values
-        train_features = train_features.apply(pd.to_numeric, errors="raise")
-        val_features = val_features.apply(pd.to_numeric, errors="raise")
-        train_labels = train_labels.apply(pd.to_numeric, errors="raise")
-        val_labels = val_labels.apply(pd.to_numeric, errors="raise")
-
-        # Prepare tensor data set.
-        tensor_train_features = torch.tensor(train_features.values, dtype=torch.float32)
-        tensor_val_features = torch.tensor(val_features.values, dtype=torch.float32)
-        tensor_train_labels = torch.tensor(
-            train_labels.values, dtype=torch.float32
-        ).unsqueeze(1)
-        tensor_val_labels = torch.tensor(
-            val_labels.values, dtype=torch.float32
-        ).unsqueeze(1)
-        # Added one dimension to ensure correct shape
-
-        train_dataset = TensorDataset(tensor_train_features, tensor_train_labels)
-        val_dataset = TensorDataset(tensor_val_features, tensor_val_labels)
-
-        # Build training and validation data loader
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-        # Loss function and optimizer
-        criterion = nn.BCEWithLogitsLoss()
-        optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-
-        # Early stopping
-        best_val_loss = float("inf")
-        epochs_no_improve = 0
-        best_model = None
-
-        # Training loop: move batches to GPU during training
-        for epoch in range(num_epochs):
-            # Train
-            self.model.train()
-            for X_batch, y_batch in train_loader:
-                X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
-                outputs = self.model(X_batch)
-                cur_loss = criterion(outputs, y_batch)
-
-                optimizer.zero_grad()
-                cur_loss.backward()
-                optimizer.step()
-
-            # Validation loop
-            self.model.eval()
-            val_loss = 0
-
-            # Disable gradient calculations for validation: we don't need
-            # to backpropagate and update weights in validation
-            with torch.no_grad():
-                for X_batch, y_batch in val_loader:
-                    X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
-                    outputs = self.model(X_batch)
-                    cur_loss = criterion(outputs, y_batch)
-                    val_loss += cur_loss.item()
-
-            # Print validation loss
-            val_loss /= len(val_loader.dataset)
-            print(
-                f"Epoch {epoch+1}/{num_epochs}, Loss: {cur_loss.item():.4f}, Val Loss: {val_loss:.4f}"
-            )
-
-            # Check if validation loss is improved - early stopping
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                epochs_no_improve = 0
-                best_model = self.model.state_dict()
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= patience:
-                    print("Early stopping")
-                    break
-
-        # Load the best model
-        if best_model is not None:
-            self.model.load_state_dict(best_model)
-            print("Loaded best model with validation loss:", best_val_loss)
-        else:
-            print("No improvement during training")
-
-    # Return test features and labels, for benchmarking
-    def get_test_data(self):
-        return self.test_features, self.test_labels
+        Returns:
+            BCEWithLogitsLoss function
+        """
+        return nn.BCEWithLogitsLoss()
 
 
 if __name__ == "__main__":
-    # File configs
-    project_path = Path(".")
-    hyperparam_file_name = "solvent_hyperparams.json"
-    data_dir = project_path / "data" / "solvent"
-    data_file_path = data_dir / "solvent_clean_data.pkl"
+    # File paths
+    data_file_path = SOLVENT_DATA_DIR / "solvent_clean_data.pkl"
+    hyperparam_file_path = MODEL_DIR / "solvent_hyperparams.json"
+    model_file_path = MODEL_DIR / "solvent_model.pkl"
+    scaler_file_path = SCALER_DIR / "solvent_scaler.pkl"
+    test_data_path = SOLVENT_DATA_DIR / "solvent_test_data.pkl"
 
-    # Read data: train on all features
-    # removed_cols: List[str] = [
-    #     "Unnamed: 0",
-    #     "doi",
-    #     "filename",
-    #     "0",
-    #     "CoRE_name",
-    #     "refcode",
-    #     "name",
-    # ]
-    solvent_all_df: pd.DataFrame = joblib.load(data_file_path)
-    # solvent_all_df = df.loc[:, ~df.columns.isin(removed_cols)]
-
-    # Read hyperparameters
+    # Load configurations
     print("**Reading hyperparameter config**")
-    hyperparam_file_path = project_path / "model" / hyperparam_file_name
-    with open(hyperparam_file_path, "r") as f:
-        hyperparams: Dict = json.load(f)
+    model_config = ModelConfig.from_json(hyperparam_file_path)
+    training_config = TrainingConfig.from_json(hyperparam_file_path)
 
-    # Create, build, and train the model
-    pipeline: SolventModelPipeline = SolventModelPipeline(
-        project_path, hyperparams, solvent_all_df
-    )
+    # Create pipeline
+    pipeline = SolventPipeline(model_config, training_config)
 
-    # Use test features and labels to benchmark performance
-    model_file_name = "solvent_model.pkl"
-    model_file_path = project_path / "model" / model_file_name
-    test_features, test_labels = pipeline.get_test_data()
-    test_all = pd.concat([test_labels, test_features], axis=1)
+    # Prepare data
+    pipeline.prepare_data(data_file_path, scaler_file_path)
 
-    # Save unused test data for future testing
-    print(f"**Model saved at {model_file_path}**")
-    test_data_path = data_dir / "solvent_test_data.pkl"
-    test_all.to_pickle(test_data_path)
-    print(f"**Test data saved at {test_data_path}**")
+    # Build model
+    pipeline.build_model()
+
+    # Train model
+    pipeline.train()
+
+    # Save model and test data
+    pipeline.save(model_file_path, test_data_path)

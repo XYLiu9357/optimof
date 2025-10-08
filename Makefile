@@ -93,15 +93,15 @@ train-all: train-thermal train-solvent train-water
 # Model testing
 .PHONY: test-thermal
 test-thermal:
-	python -m src.model_training.thermal_model_test
+	python -m src.model_training.tests.test_thermal
 
 .PHONY: test-solvent
 test-solvent:
-	python -m src.model_training.solvent_model_test
+	python -m src.model_training.tests.test_solvent
 
 .PHONY: test-water
 test-water:
-	python -m src.model_training.water_stability_model_test
+	python -m src.model_training.tests.test_water
 
 .PHONY: test-all
 test-all: test-thermal test-solvent test-water
