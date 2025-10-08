@@ -13,11 +13,7 @@ import pandas as pd
 import torch.nn as nn
 
 from src.config.constants import SOLVENT_LABEL
-from src.config.paths import (
-    MODEL_DIR,
-    SCALER_DIR,
-    SOLVENT_DATA_DIR,
-)
+from src.config.paths import MODEL_DIR, SCALER_DIR, SOLVENT_DATA_DIR
 from src.model_training.base.base_pytorch_pipeline import BasePyTorchPipeline
 from src.model_training.base.config import ModelConfig, TrainingConfig
 from src.model_training.base.flexible_mlp import FlexibleMLP

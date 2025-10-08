@@ -23,8 +23,8 @@ class FlexibleMLP(nn.Module):
         hidden_layers: List[int],
         output_size: int,
         dropout_prob: float = 0.2,
-        arch_type: str = 'simple',
-        activation: str = 'leaky_relu',
+        arch_type: str = "simple",
+        activation: str = "leaky_relu",
     ):
         """Initialize FlexibleMLP.
 
@@ -46,52 +46,60 @@ class FlexibleMLP(nn.Module):
         self.layer_sizes = layer_sizes
 
         # Build layers based on architecture type
-        if arch_type == 'simple':
+        if arch_type == "simple":
             self._build_simple(layer_sizes)
-        elif arch_type == 'batchnorm':
+        elif arch_type == "batchnorm":
             self._build_batchnorm(layer_sizes)
-        elif arch_type == 'residual':
+        elif arch_type == "residual":
             self._build_residual(layer_sizes)
         else:
             raise ValueError(f"Unknown arch_type: {arch_type}")
 
     def _get_activation(self, activation: str):
         """Get activation function by name."""
-        if activation == 'relu':
+        if activation == "relu":
             return nn.functional.relu
-        elif activation == 'leaky_relu':
+        elif activation == "leaky_relu":
             return nn.functional.leaky_relu
-        elif activation == 'elu':
+        elif activation == "elu":
             return nn.functional.elu
         else:
             raise ValueError(f"Unknown activation: {activation}")
 
     def _build_simple(self, layer_sizes: List[int]):
         """Build simple fully-connected architecture."""
-        self.layers = nn.ModuleList([
-            nn.Linear(layer_sizes[i], layer_sizes[i + 1])
-            for i in range(len(layer_sizes) - 1)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                nn.Linear(layer_sizes[i], layer_sizes[i + 1])
+                for i in range(len(layer_sizes) - 1)
+            ]
+        )
 
     def _build_batchnorm(self, layer_sizes: List[int]):
         """Build architecture with batch normalization."""
-        self.layers = nn.ModuleList([
-            nn.Linear(layer_sizes[i], layer_sizes[i + 1])
-            for i in range(len(layer_sizes) - 1)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                nn.Linear(layer_sizes[i], layer_sizes[i + 1])
+                for i in range(len(layer_sizes) - 1)
+            ]
+        )
 
         # Add batch norm for all layers except output
-        self.batchnorms = nn.ModuleList([
-            nn.BatchNorm1d(layer_sizes[i + 1])
-            for i in range(len(layer_sizes) - 2)  # Exclude output layer
-        ])
+        self.batchnorms = nn.ModuleList(
+            [
+                nn.BatchNorm1d(layer_sizes[i + 1])
+                for i in range(len(layer_sizes) - 2)  # Exclude output layer
+            ]
+        )
 
     def _build_residual(self, layer_sizes: List[int]):
         """Build architecture with residual connections."""
-        self.layers = nn.ModuleList([
-            nn.Linear(layer_sizes[i], layer_sizes[i + 1])
-            for i in range(len(layer_sizes) - 1)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                nn.Linear(layer_sizes[i], layer_sizes[i + 1])
+                for i in range(len(layer_sizes) - 1)
+            ]
+        )
 
         # Create projection layers for dimension mismatch
         self.projections = nn.ModuleList()
@@ -105,11 +113,11 @@ class FlexibleMLP(nn.Module):
 
     def forward(self, x):
         """Forward pass through the network."""
-        if self.arch_type == 'simple':
+        if self.arch_type == "simple":
             return self._forward_simple(x)
-        elif self.arch_type == 'batchnorm':
+        elif self.arch_type == "batchnorm":
             return self._forward_batchnorm(x)
-        elif self.arch_type == 'residual':
+        elif self.arch_type == "residual":
             return self._forward_residual(x)
 
     def _forward_simple(self, x):

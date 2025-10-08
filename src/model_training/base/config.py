@@ -14,8 +14,8 @@ class ModelConfig:
     hidden_layers: List[int]
     output_size: int
     dropout_prob: float = 0.2
-    arch_type: str = 'simple'  # 'simple', 'batchnorm', or 'residual'
-    activation: str = 'leaky_relu'  # 'relu', 'leaky_relu', or 'elu'
+    arch_type: str = "simple"  # 'simple', 'batchnorm', or 'residual'
+    activation: str = "leaky_relu"  # 'relu', 'leaky_relu', or 'elu'
 
     @classmethod
     def from_json(cls, json_path: Path) -> "ModelConfig":
@@ -68,7 +68,7 @@ class TrainingConfig:
     batch_size: int
     num_epochs: int
     patience: int
-    optimizer: str = 'adam'  # 'adam' or 'adamw'
+    optimizer: str = "adam"  # 'adam' or 'adamw'
 
     @classmethod
     def from_json(cls, json_path: Path) -> "TrainingConfig":

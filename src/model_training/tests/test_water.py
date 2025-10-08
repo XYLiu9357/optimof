@@ -7,7 +7,9 @@ import joblib
 
 from src.config.paths import MODEL_DIR, WATER_RF_PERFORMANCE_DIR
 from src.model_training.base.evaluator import MultiClassEvaluator
-from src.model_training.water_stability_model import WaterStabilityPipeline  # For unpickling
+from src.model_training.water_stability_model import (
+    WaterStabilityPipeline,
+)  # For unpickling
 
 
 def evaluate_water_model(model_type: str = "rf"):

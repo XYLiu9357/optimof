@@ -67,31 +67,25 @@ class SklearnTuner(BaseTuner):
         # Sample hyperparameters based on model type
         if self.base_model_type == "rf":
             param_grid = {
-                "n_estimators": [
-                    trial.suggest_int("n_estimators", 100, 300, step=50)
+                "n_estimators": [trial.suggest_int("n_estimators", 100, 300, step=50)],
+                "max_depth": [
+                    trial.suggest_categorical("max_depth", [None, 10, 20, 30])
                 ],
-                "max_depth": [trial.suggest_categorical("max_depth", [None, 10, 20, 30])],
                 "min_samples_split": [
                     trial.suggest_int("min_samples_split", 2, 10, step=2)
                 ],
-                "min_samples_leaf": [
-                    trial.suggest_int("min_samples_leaf", 1, 4)
-                ],
+                "min_samples_leaf": [trial.suggest_int("min_samples_leaf", 1, 4)],
                 "bootstrap": [trial.suggest_categorical("bootstrap", [True, False])],
             }
         else:  # xgboost
             param_grid = {
-                "n_estimators": [
-                    trial.suggest_int("n_estimators", 100, 300, step=50)
-                ],
+                "n_estimators": [trial.suggest_int("n_estimators", 100, 300, step=50)],
                 "max_depth": [trial.suggest_int("max_depth", 3, 10)],
                 "learning_rate": [
                     trial.suggest_float("learning_rate", 0.01, 0.3, log=True)
                 ],
                 "subsample": [trial.suggest_float("subsample", 0.6, 1.0)],
-                "colsample_bytree": [
-                    trial.suggest_float("colsample_bytree", 0.6, 1.0)
-                ],
+                "colsample_bytree": [trial.suggest_float("colsample_bytree", 0.6, 1.0)],
             }
 
         # Train model and get cross-validation score

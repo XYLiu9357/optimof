@@ -58,7 +58,9 @@ def evaluate_solvent_model():
 
     # Evaluate
     evaluator = BinaryClassificationEvaluator()
-    metrics = evaluator.calculate_metrics(test_labels, binary_predictions, probabilities)
+    metrics = evaluator.calculate_metrics(
+        test_labels, binary_predictions, probabilities
+    )
     evaluator.plot_results(
         test_labels, binary_predictions, probabilities, SOLVENT_PERFORMANCE_DIR
     )

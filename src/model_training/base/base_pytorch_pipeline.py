@@ -155,7 +155,7 @@ class BasePyTorchPipeline(ABC):
         criterion = self._get_loss_function()
 
         # Select optimizer based on config
-        if self.training_config.optimizer == 'adamw':
+        if self.training_config.optimizer == "adamw":
             optimizer = optim.AdamW(
                 self.model.parameters(), lr=self.training_config.learning_rate
             )
@@ -267,7 +267,9 @@ class BasePyTorchPipeline(ABC):
         return self.test_features, self.test_labels
 
     @classmethod
-    def load_model(cls, model_path: Path, device: Optional[torch.device] = None) -> nn.Module:
+    def load_model(
+        cls, model_path: Path, device: Optional[torch.device] = None
+    ) -> nn.Module:
         """Load a trained model.
 
         Args:

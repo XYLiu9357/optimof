@@ -17,8 +17,8 @@ from sklearn.ensemble import RandomForestClassifier
 from src.config.constants import RANDOM_STATE, WATER_LABEL, WATER_LABEL_OFFSET
 from src.config.paths import (
     MODEL_DIR,
-    WATER_DATA_DIR,
     WATER_BOOST_PERFORMANCE_DIR,
+    WATER_DATA_DIR,
     WATER_RF_PERFORMANCE_DIR,
 )
 from src.model_training.base.base_sklearn_pipeline import BaseSklearnPipeline
@@ -73,9 +73,7 @@ class WaterStabilityPipeline(BaseSklearnPipeline):
             performance_dir=performance_dir,
         )
 
-    def prepare_data(
-        self, features: pd.DataFrame, labels: pd.Series
-    ) -> None:
+    def prepare_data(self, features: pd.DataFrame, labels: pd.Series) -> None:
         """Split data and normalize labels.
 
         Args:

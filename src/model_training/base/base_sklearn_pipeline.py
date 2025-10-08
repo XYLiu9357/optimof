@@ -67,9 +67,7 @@ class BaseSklearnPipeline(ABC):
         self.test_data_save_path = test_data_save_path
         self.performance_dir = performance_dir
 
-    def prepare_data(
-        self, features: pd.DataFrame, labels: pd.Series
-    ) -> None:
+    def prepare_data(self, features: pd.DataFrame, labels: pd.Series) -> None:
         """Split data into training and testing sets.
 
         Note: sklearn models don't require feature scaling for tree-based methods.

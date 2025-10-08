@@ -171,8 +171,12 @@ class BaseTuner(ABC):
         """Print statistics about the study."""
         print(f"\nStudy Statistics:")
         print(f"  Number of finished trials: {len(self.study.trials)}")
-        print(f"  Number of pruned trials: {len(self.study.get_trials(states=[optuna.trial.TrialState.PRUNED]))}")
-        print(f"  Number of complete trials: {len(self.study.get_trials(states=[optuna.trial.TrialState.COMPLETE]))}")
+        print(
+            f"  Number of pruned trials: {len(self.study.get_trials(states=[optuna.trial.TrialState.PRUNED]))}"
+        )
+        print(
+            f"  Number of complete trials: {len(self.study.get_trials(states=[optuna.trial.TrialState.COMPLETE]))}"
+        )
 
         if len(self.study.trials) > 0:
             print(f"\nBest trial:")

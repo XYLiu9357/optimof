@@ -6,8 +6,8 @@ import joblib
 
 from src.config.constants import WATER_LABEL
 from src.config.paths import WATER_DATA_DIR
-from src.model_training.water_stability_model import WaterStabilityPipeline
 from src.model_training.tune.sklearn_tuner import SklearnTuner
+from src.model_training.water_stability_model import WaterStabilityPipeline
 
 
 def main():
