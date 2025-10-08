@@ -1,0 +1,47 @@
+{
+  "model_type": "pytorch_binary_classification",
+  "architecture": {
+    "input_size": 190,
+    "hidden_layers": [
+      128,
+      256,
+      1024,
+      2048,
+      128,
+      256
+    ],
+    "output_size": 1,
+    "dropout_prob": 0.02460528979715862,
+    "arch_type": "batchnorm",
+    "activation": "relu"
+  },
+  "training": {
+    "learning_rate": 7.635909939089545e-05,
+    "batch_size": 512,
+    "num_epochs": 1000,
+    "patience": 100,
+    "optimizer": "adamw"
+  },
+  "tuning_metadata": {
+    "best_trial": 692,
+    "best_value": 0.0023090842791966028,
+    "n_trials": 767,
+    "study_name": "solvent_pytorch",
+    "date": "2025-10-08T13:59:26.640455",
+    "params": {
+      "arch_type": "batchnorm",
+      "n_layers": 6,
+      "layer_0_size": 128,
+      "layer_1_size": 256,
+      "layer_2_size": 1024,
+      "layer_3_size": 2048,
+      "layer_4_size": 128,
+      "layer_5_size": 256,
+      "dropout": 0.02460528979715862,
+      "activation": "relu",
+      "learning_rate": 7.635909939089545e-05,
+      "batch_size": 512,
+      "optimizer": "adamw"
+    }
+  }
+}

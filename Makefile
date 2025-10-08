@@ -170,6 +170,7 @@ clean-all:
 	-rm -f data/*/*_test_data.pkl
 	-rm -f model/*.pkl
 	-rm -f model/scalers/*.pkl
+	-rm -f model/structure/*_structure.json
 
 .PHONY: clean-temp
 clean-temp:

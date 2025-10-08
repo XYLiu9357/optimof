@@ -1,0 +1,45 @@
+{
+  "model_type": "pytorch_regression",
+  "architecture": {
+    "input_size": 190,
+    "hidden_layers": [
+      128,
+      512,
+      2048,
+      256,
+      1024
+    ],
+    "output_size": 1,
+    "dropout_prob": 0.12422643501281846,
+    "arch_type": "batchnorm",
+    "activation": "relu"
+  },
+  "training": {
+    "learning_rate": 0.001987137954103817,
+    "batch_size": 256,
+    "num_epochs": 1000,
+    "patience": 100,
+    "optimizer": "adam"
+  },
+  "tuning_metadata": {
+    "best_trial": 212,
+    "best_value": 13.657289786167828,
+    "n_trials": 860,
+    "study_name": "thermal_pytorch",
+    "date": "2025-10-08T13:54:33.789442",
+    "params": {
+      "arch_type": "batchnorm",
+      "n_layers": 5,
+      "layer_0_size": 128,
+      "layer_1_size": 512,
+      "layer_2_size": 2048,
+      "layer_3_size": 256,
+      "layer_4_size": 1024,
+      "dropout": 0.12422643501281846,
+      "activation": "relu",
+      "learning_rate": 0.001987137954103817,
+      "batch_size": 256,
+      "optimizer": "adam"
+    }
+  }
+}

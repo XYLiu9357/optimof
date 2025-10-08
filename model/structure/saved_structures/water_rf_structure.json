@@ -1,0 +1,27 @@
+{
+  "model_type": "water_rf",
+  "architecture": {
+    "model_type": "rf"
+  },
+  "training": {
+    "n_estimators": 250,
+    "max_depth": 20,
+    "min_samples_split": 8,
+    "min_samples_leaf": 1,
+    "bootstrap": false
+  },
+  "tuning_metadata": {
+    "best_trial": 8,
+    "best_value": 0.6757990867579908,
+    "n_trials": 201,
+    "study_name": "water_rf",
+    "date": "2025-10-08T14:14:24.818655",
+    "params": {
+      "n_estimators": 250,
+      "max_depth": 20,
+      "min_samples_split": 8,
+      "min_samples_leaf": 1,
+      "bootstrap": false
+    }
+  }
+}
