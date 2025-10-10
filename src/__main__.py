@@ -76,7 +76,7 @@ def helper_predict_cif(target_file: str):
         }
     )
     mof_map_path = data_dir / "mof_map.pkl"
-    target_nn = get_nearest_neighbor(mof_map_path, prop_df)
+    target_nn = get_nearest_neighbor(mof_map_path, prop_df, project_path)
     print(f"Nearest neighbor found: {target_nn}")
     print("**Prediction complete**")
     return tempeartures, solvent_flags, water_flags

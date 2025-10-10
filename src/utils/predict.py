@@ -224,7 +224,30 @@ def predict_from_file(project_path: Path, target_path: Path) -> pd.DataFrame:
 
 
 # Nearest neighbor search
-def get_nearest_neighbor(mof_map_path: Path, query: pd.DataFrame) -> str:
+def get_nearest_neighbor(mof_map_path: Path, query: pd.DataFrame, project_path: Path = Path(".")) -> str:
+    """Find nearest neighbor MOF based on predicted properties.
+
+    Args:
+        mof_map_path: Path to the MOF map file
+        query: DataFrame with columns ['thermal', 'solvent', 'water']
+        project_path: Project root path for loading scaler
+
+    Returns:
+        Name of the nearest neighbor MOF
+    """
+    project_path = Path(project_path)
+
+    # Load scaler if it exists (for normalized MOF maps)
+    scaler_path = project_path / "data" / "mof_map_scaler.pkl"
+    if scaler_path.exists():
+        scaler: StandardScaler = joblib.load(scaler_path)
+        # Apply the same normalization to the query
+        query_normalized = query.copy()
+        query_normalized[['thermal', 'solvent', 'water']] = scaler.transform(
+            query[['thermal', 'solvent', 'water']]
+        )
+        query = query_normalized
+
     mof_map: MOFMap = MOFMap()
     mof_map.import_from_file(mof_map_path)
     nn_result = mof_map.nearest_neighbor_query(query.values.reshape(1, -1))

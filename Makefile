@@ -42,6 +42,7 @@ help:
 	@echo "    test-all           - Test all models"
 	@echo ""
 	@echo "  Application:"
+	@echo "    build-mof-map      - Build MOF map for nearest neighbor queries"
 	@echo "    run-client         - Run Flask client or CLI (use ARGS for arguments)"
 	@echo ""
 	@echo "  Code Quality:"
@@ -137,6 +138,10 @@ test-water:
 test-all: test-thermal test-solvent test-water
 
 # MOF database for nearest neighbor query
+.PHONY: build-mof-map
+build-mof-map:
+	python -m src.utils.build_mof_map
+
 .PHONY: run-client
 run-client:
 	python -m src $(ARGS)
