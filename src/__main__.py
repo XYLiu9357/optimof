@@ -35,7 +35,7 @@ from src.utils.predict import (
 project_path = Path(".")
 data_dir = project_path / "data"
 data_pkl_path = data_dir / "all_in_one.pkl"
-mof_map_file_path = data_dir / "mof_map.pkl"
+mof_map_file_path = data_dir / "mof_map" / "mof_map_filled.pkl"
 
 
 # Get current date and time as a string
@@ -75,7 +75,7 @@ def helper_predict_cif(target_file: str):
             "water": np.argmax(water_flags, axis=1) + 1,
         }
     )
-    mof_map_path = data_dir / "mof_map.pkl"
+    mof_map_path = data_dir / "mof_map" / "mof_map_filled.pkl"
     target_nn = get_nearest_neighbor(mof_map_path, prop_df, project_path)
     print(f"Nearest neighbor found: {target_nn}")
     print("**Prediction complete**")

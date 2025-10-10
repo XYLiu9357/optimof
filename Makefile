@@ -43,6 +43,7 @@ help:
 	@echo ""
 	@echo "  Application:"
 	@echo "    build-mof-map      - Build MOF map for nearest neighbor queries"
+	@echo "    fill-mof-map       - Build MOF map with missing labels filled by models"
 	@echo "    run-client         - Run Flask client or CLI (use ARGS for arguments)"
 	@echo ""
 	@echo "  Code Quality:"
@@ -141,6 +142,10 @@ test-all: test-thermal test-solvent test-water
 .PHONY: build-mof-map
 build-mof-map:
 	python -m src.utils.build_mof_map
+
+.PHONY: fill-mof-map
+fill-mof-map:
+	python -m src.utils.build_mof_map --fill-missing
 
 .PHONY: run-client
 run-client:

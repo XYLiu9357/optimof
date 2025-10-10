@@ -238,7 +238,11 @@ def get_nearest_neighbor(mof_map_path: Path, query: pd.DataFrame, project_path: 
     project_path = Path(project_path)
 
     # Load scaler if it exists (for normalized MOF maps)
-    scaler_path = project_path / "data" / "mof_map_scaler.pkl"
+    # Try filled map scaler first, then fall back to standard scaler
+    scaler_path = project_path / "data" / "mof_map" / "mof_map_filled_scaler.pkl"
+    if not scaler_path.exists():
+        scaler_path = project_path / "data" / "mof_map" / "mof_map_scaler.pkl"
+
     if scaler_path.exists():
         scaler: StandardScaler = joblib.load(scaler_path)
         # Apply the same normalization to the query

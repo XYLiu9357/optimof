@@ -35,8 +35,8 @@ class MOFMap:
                     multiplied by sqrt(weights) to achieve weighted Euclidean distance.
         """
         project_path = Path(project_path)
-        self.import_file_path = project_path / "data" / "mof-tree.pkl"
-        self.export_filepath = project_path / "data" / "mof-tree.pkl"
+        self.import_file_path = project_path / "data" / "mof_map" / "mof-tree.pkl"
+        self.export_filepath = project_path / "data" / "mof_map" / "mof-tree.pkl"
         self.dist_metric = dist_metric
         self.weights = weights
 
