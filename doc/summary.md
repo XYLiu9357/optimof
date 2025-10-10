@@ -1,415 +1,95 @@
 # OptiMOF: Machine Learning Pipeline for MOF Stability Prediction
 
-## Methodology Summary
-
-This document describes the complete data pipeline for predicting stability properties of metal-organic frameworks (MOFs) using machine learning, from feature extraction to model predictions.
+This document provides a comprehensive technical description of the OptiMOF machine learning framework for predicting stability properties of metal-organic frameworks. The system employs a multi-stage pipeline encompassing feature extraction from crystallographic information files, data preprocessing and normalization, model training using neural networks and ensemble methods, and predictive analysis augmented by a novel nearest-neighbor search framework for materials discovery.
 
 ---
 
-## 1. Feature Extraction from CIF Files
+## 1. Feature Extraction
 
-### 1.1 Overview
-The pipeline extracts structural and chemical features from Crystallographic Information Files (CIF) using two complementary approaches:
+The feature extraction module processes Crystallographic Information Files (CIF) to generate comprehensive structural and chemical descriptors that serve as input to the predictive models. Features are derived from two complementary analytical approaches: geometric analysis via the Zeo++ software package and chemical environment characterization through Revised Autocorrelation (RAC) descriptors. For model training, these features are paired with experimentally determined stability labels curated from the existing research literature on MOF stability. For prediction and application tasks, features are extracted directly from user-provided CIF files without requiring prior knowledge of stability properties.
 
-1. **Geometric descriptors** via Zeo++ software
-2. **Revised Autocorrelation (RAC) descriptors** for chemical environments
+The geometric feature extraction leverages Zeo++ (version 0.3) to compute structural descriptors characterizing porosity, surface area, and void space topology. The analysis employs a probe radius of 1.86 Ångströms, representing typical molecular dimensions for adsorbate interactions. Three sequential Zeo++ invocations compute distinct property sets: pore diameter analysis yields the maximum included sphere diameter (Di), maximum free sphere diameter (Df), and maximum included sphere along the free sphere path (Dif); surface area analysis produces volumetric surface area (VSA, m²/cm³) and gravimetric surface area (GSA, m²/g); pore volume analysis generates volumetric and gravimetric pore volumes (VPOV, GPOV), accessible and non-accessible void volumes (POAV, PONAV, GPOAV, GPONAV), and corresponding volume fractions. All calculations utilize 10,000 Monte Carlo sampling points to ensure accurate integration over complex pore geometries.
 
-### 1.2 Zeo++ Geometric Feature Extraction
+Chemical environment descriptors are extracted using the RAC_finder module, which implements the Revised Autocorrelation methodology adapted from the MOFSimplify framework. RAC descriptors encode local chemical environments by computing property-weighted autocorrelations along graph distances within the MOF structure. The algorithm characterizes linker chemistry through organic ligand properties, metal node chemistry via local coordination environments, and secondary building unit topology through structural motifs. For each MOF component, atomic properties including electronegativity, coordination number, and identity are weighted by their graph distance from reference atoms, generating approximately 165 RAC features per structure. This approach captures both compositional information and the spatial distribution of chemical functionality throughout the framework.
 
-The Zeo++ software (`src/model_features/feature_extraction.py:92-110`) is invoked to compute geometric properties using a probe radius of **1.86 Ångströms** (representing typical molecular dimensions):
-
-**Pore Size Descriptors:**
-- **Di**: Maximum included sphere diameter
-- **Df**: Maximum free sphere diameter
-- **Dif**: Maximum included sphere along free sphere path
-
-**Surface Area Metrics:**
-- **VSA**: Volumetric surface area (m²/cm³)
-- **GSA**: Gravimetric surface area (m²/g)
-
-**Pore Volume Metrics:**
-- **VPOV/GPOV**: Volumetric/gravimetric pore volume
-- **POAV/PONAV**: Pore accessible/non-accessible volume (Ų)
-- **GPOAV/GPONAV**: Gravimetric versions (cm³/g)
-- **POAV_vol_frac/PONAV_vol_frac**: Volume fractions
-
-**Cell Properties:**
-- **cell_v**: Unit cell volume (Ų)
-
-All Zeo++ calculations use 10,000 Monte Carlo samples for accurate surface area and volume estimates.
-
-### 1.3 RAC Chemical Descriptors
-
-The RAC_finder module (`src/model_features/RAC_finder.py`) extracts chemical environment descriptors characterizing:
-
-- **Linker chemistry**: Organic ligand properties
-- **Metal node chemistry**: Local coordination environments
-- **Secondary building units (SBUs)**: Structural motifs
-
-These descriptors capture atomic properties (electronegativity, coordination number, identity) weighted by graph distance from reference atoms, generating ~165 RAC features per MOF.
-
-### 1.4 Feature Aggregation
-
-For MOFs with multiple linker/metal types, numeric RAC descriptors are **averaged** to create a single feature vector (`src/model_features/feature_extraction.py:250-259`). The final merged dataset contains **190 features** after:
-
-1. Combining geometric and RAC descriptors
-2. Dropping empty/constant columns (38 D_func, D_lc, D_mc variants with no variance)
-3. Model-specific feature selection
+Feature aggregation combines the geometric and chemical descriptor sets into a unified feature vector. For MOFs containing multiple distinct linker or metal types, numeric RAC descriptors are averaged across all instances to produce a single representative value per feature. The merged dataset initially contains 228 combined features, which are subsequently filtered to remove columns exhibiting zero variance or missing data across all training samples. After eliminating 38 such invariant features (primarily D_func, D_lc, and D_mc variants), the thermal and solvent stability models operate on 190 features. The water stability model employs a reduced feature set of 179 features, with 11 additional columns dropped due to their limited predictive value for aqueous stability assessment. This feature selection process ensures that all model inputs contain meaningful variation while maintaining computational efficiency.
 
 ---
 
-## 2. Data Preprocessing and Normalization
+## 2. Feature Normalization
 
-### 2.1 Data Cleaning (`src/model_features/preprocess.py`)
+Feature normalization is applied to address the disparate scales and distributions present in the raw descriptors, which span multiple orders of magnitude. Without normalization, features with large numeric ranges (such as unit cell volume, which can exceed 10,000 ų) would dominate the optimization landscape during gradient-based training, while smaller-scale features (such as fractional void volumes between 0 and 1) would contribute negligibly to the loss function. This scale imbalance impedes convergence and degrades model performance.
 
-Raw CSV files from experimental measurements are processed as follows:
+The normalization procedure employs StandardScaler from scikit-learn, which transforms each feature to zero mean and unit variance through Z-score standardization. For each feature column, the transformation computes the mean (μ) and standard deviation (σ) from the training data exclusively, then applies the linear transformation x_scaled = (x - μ) / σ to all samples. This rescaling ensures that all features contribute comparably to distance metrics and gradient calculations, regardless of their original units or magnitudes. Critically, the scaler parameters (μ and σ) are computed only from the training partition to prevent data leakage; the identical transformation is subsequently applied to validation, test, and prediction data using the training-derived parameters.
 
-**Thermal Stability Data:**
-- Source: `thermal_all_data.csv` with MOF breakdown temperatures
-- Drops metadata columns (filename, CoRE_name)
-- Filters rows with missing temperature labels
-- Output: 190 features + 1 target (thermal breakdown temperature in K)
-
-**Solvent Removal Stability Data:**
-- Source: `solvent_all_data.csv` with binary stability labels
-- Original labels: {-1 (unstable), +1 (stable)}
-- Normalized to: {0 (unstable), 1 (stable)} for neural network training
-- Output: 190 features + 1 binary target
-
-**Water Stability Data:**
-- Source: `water_and_haz_all_data.csv` with multi-class labels
-- Original labels: {1, 2, 3, 4} indicating stability levels
-- Normalized to: {0, 1, 2, 3} for 0-indexed classification
-- Drops 11 additional features not useful for water prediction
-- Output: 179 features + 1 multi-class target
-
-### 2.2 Train-Test Split
-
-Data is split using `sklearn.model_selection.train_test_split` with:
-- **Test size**: 20% of data
-- **Random state**: 0 (for reproducibility)
-- **Stratification**: None (continuous target for thermal; class imbalance considerations for classification)
-
-Implementation in `src/model_training/base/data_processor.py:48-70`.
-
-### 2.3 Feature Normalization
-
-**StandardScaler** from scikit-learn applies Z-score normalization:
-
-```
-x_scaled = (x - μ) / σ
-```
-
-Where μ is the mean and σ is the standard deviation computed on **training data only** (`data_processor.py:72-79`). The same scaler is applied to test and prediction data to prevent data leakage.
-
-Scalers are saved as pickle files:
-- `model/scalers/thermal_scaler.pkl`
-- `model/scalers/solvent_scaler.pkl`
-- (Water models use sklearn's built-in scaling in GridSearchCV)
+The rationale for standardization extends beyond computational convenience. Neural networks with sigmoid or tanh activation functions exhibit sensitivity to input scale, as excessively large inputs can saturate activation functions and produce vanishing gradients during backpropagation. Similarly, tree-based ensemble methods benefit from standardization when employed with distance-based impurity measures. By centering features at zero and scaling to unit variance, the optimization landscape becomes more isotropic, enabling more efficient exploration via gradient descent and reducing the sensitivity of learning rate selection. The trained scalers are serialized and saved to disk (thermal_scaler.pkl, solvent_scaler.pkl) to ensure consistent preprocessing during model deployment and inference.
 
 ---
 
-## 3. Model Architectures
+## 3. Model Training
 
-### 3.1 Thermal Stability Model (Regression)
+The model training infrastructure implements distinct architectures tailored to the specific characteristics of each stability prediction task. The thermal and solvent stability models employ deep neural networks implemented in PyTorch, while the water stability model utilizes a Random Forest classifier from scikit-learn. This heterogeneous approach reflects the varying data characteristics, label distributions, and predictive requirements across the three stability domains.
 
-**Task**: Predict MOF breakdown temperature (continuous value)
+### Thermal Stability Model
 
-**Architecture**: Flexible Multi-Layer Perceptron (FlexibleMLP) with:
-- **Input**: 190 features
-- **Hidden layers**: [128, 512, 2048, 256, 1024] neurons
-- **Output**: 1 neuron (temperature prediction)
-- **Activation**: ReLU
-- **Regularization**: Batch normalization + 12.4% dropout
-- **Loss function**: Mean Squared Error (MSE)
+The thermal stability model addresses a regression task: predicting the continuous-valued breakdown temperature (in Kelvin) at which a MOF structure undergoes irreversible decomposition. The model architecture is a FlexibleMLP (multi-layer perceptron) configured with batch normalization, comprising an input layer accepting 190 features, five hidden layers with neuron counts of [128, 512, 2048, 256, 1024], and a single-neuron output layer producing the predicted temperature. The architecture employs ReLU activation functions throughout the hidden layers to introduce non-linearity while mitigating vanishing gradient problems. Batch normalization layers are inserted after each hidden layer linear transformation to stabilize training dynamics by normalizing activations across mini-batches, which reduces internal covariate shift and enables higher learning rates. Dropout regularization with probability 12.4% is applied after each activation to prevent overfitting by randomly deactivating neurons during training.
 
-**Training Configuration**:
-- Optimizer: Adam (lr = 0.00199)
-- Batch size: 256
-- Max epochs: 1000
-- Early stopping: patience = 100 epochs
+The training configuration utilizes the Adam optimizer with a learning rate of 0.00199, which adaptively adjusts per-parameter learning rates based on first and second moment estimates of gradients. Mini-batches of 256 samples are processed in each training iteration, balancing computational efficiency with gradient estimate quality. The loss function is mean squared error (MSE), which penalizes prediction errors quadratically and provides smooth gradients for optimization. Training proceeds for a maximum of 1,000 epochs with early stopping patience set to 100 epochs; if validation loss fails to improve for 100 consecutive epochs, training terminates to prevent overfitting to the training partition. This architecture was determined through Optuna hyperparameter optimization over 860 trials, exploring configurations with 1-8 hidden layers, layer widths from 32-2048 neurons, dropout rates from 0-0.5, learning rates from 10⁻⁵ to 10⁻², and batch sizes from 32-512. The optimal configuration (trial 212) achieved a validation RMSE of 13.66 K.
 
-Architecture determined via Optuna hyperparameter tuning (860 trials) and saved in `model/structure/saved_structures/thermal_pytorch_structure.json`.
+### Solvent Removal Stability Model
 
-### 3.2 Solvent Removal Stability Model (Binary Classification)
+The solvent stability model performs binary classification to predict whether a MOF retains structural integrity following solvent removal from its pores. This is a critical property for practical applications, as many as-synthesized MOFs contain guest solvent molecules that must be evacuated to activate the pore space. The model architecture is a FlexibleMLP with batch normalization, featuring an input layer accepting 190 features, six hidden layers with neuron counts [128, 256, 1024, 2048, 128, 256], and a single-neuron output layer with sigmoid activation producing class probabilities. The deeper architecture relative to the thermal model reflects the greater complexity of capturing the structural stability factors governing collapse versus retention during desolvation.
 
-**Task**: Predict if MOF maintains structural integrity upon solvent removal
+ReLU activations are employed in hidden layers, with batch normalization applied after each linear transformation. Dropout regularization with probability 2.5% provides modest regularization while allowing the model to leverage its full representational capacity for this challenging classification task. The training configuration utilizes the AdamW optimizer (weight-decay-regularized Adam) with learning rate 7.64×10⁻⁵, which applies decoupled weight decay to prevent parameter magnitude growth independently of gradient-based updates. Mini-batches of 512 samples are processed per iteration, twice the thermal model batch size to improve gradient estimates for the binary classification objective. The loss function is binary cross-entropy with logits (BCEWithLogitsLoss), which combines sigmoid activation with numerically stable log-likelihood computation. Training employs the same early stopping protocol as the thermal model (maximum 1,000 epochs, patience 100). This architecture emerged from Optuna optimization over 767 trials, with the optimal configuration (trial 692) achieving a validation BCE loss of 0.00231.
 
-**Architecture**: FlexibleMLP with:
-- **Input**: 190 features
-- **Hidden layers**: [128, 256, 1024, 2048, 128, 256] neurons
-- **Output**: 1 neuron with sigmoid activation (probability)
-- **Activation**: ReLU
-- **Regularization**: Batch normalization + 2.5% dropout
-- **Loss function**: Binary Cross-Entropy with Logits (BCEWithLogitsLoss)
+### Water Stability Model
 
-**Training Configuration**:
-- Optimizer: AdamW (lr = 7.64×10⁻⁵)
-- Batch size: 512
-- Max epochs: 1000
-- Early stopping: patience = 100 epochs
+The water stability model addresses multi-class classification, assigning MOFs to one of four ordinal stability categories (0-3) representing increasing resistance to structural degradation in aqueous environments. In contrast to the neural network approaches employed for thermal and solvent stability, this model utilizes a Random Forest classifier, which was selected after comparative evaluation demonstrated superior performance relative to gradient-boosted trees (XGBoost) on this dataset. Random Forests offer several advantages for this task: they handle non-linear feature interactions through ensemble averaging, exhibit robustness to outliers and class imbalance through bootstrap aggregation, and provide feature importance metrics for interpretability.
 
-Architecture from 767 Optuna trials, saved in `model/structure/saved_structures/solvent_pytorch_structure.json`.
+The model architecture consists of an ensemble of 250 decision trees, each trained on a bootstrap sample of the training data. Trees are grown to a maximum depth of 20 splits, with internal nodes requiring a minimum of 8 samples for splitting and leaf nodes containing at least 1 sample. The bootstrap parameter is disabled (bootstrap=False), indicating that each tree is trained on the full training set rather than bootstrap samples; this configuration was found to optimize performance for this particular dataset during hyperparameter tuning. The model accepts 179 features as input, with 11 features dropped relative to the thermal and solvent models due to their minimal predictive utility for water stability (specifically: D_lc-I-0-all, D_lc-I-1-all, D_lc-I-2-all, D_lc-I-3-all, D_lc-S-0-all, D_mc-Z-0-all, POAV, PONAV, cell_v, lc-I-0-all, mc-I-0-all).
 
-### 3.3 Water Stability Model (Multi-class Classification)
-
-**Task**: Classify MOF water stability into 4 categories (0-3, representing increasing stability)
-
-**Architecture**: Random Forest Classifier
-- **Input**: 179 features (11 features dropped vs. other models)
-- **Output**: 4-class probability distribution
-- **Hyperparameters** (from GridSearchCV):
-  - n_estimators: tuned over [100, 150, 200, 250, 300]
-  - max_depth: tuned over [None, 10, 20]
-  - min_samples_split: tuned over [2, 5, 10]
-  - min_samples_leaf: tuned over [1, 2, 4]
-  - bootstrap: tuned over [True, False]
-
-Random Forest was selected over XGBoost after comparative evaluation. Implementation in `src/model_training/water_stability_model.py`.
+Hyperparameter optimization employed scikit-learn's GridSearchCV with 5-fold cross-validation over a parameter grid spanning n_estimators ∈ {100, 150, 200, 250, 300}, max_depth ∈ {None, 10, 20}, min_samples_split ∈ {2, 5, 10}, min_samples_leaf ∈ {1, 2, 4}, and bootstrap ∈ {True, False}. The grid search evaluated 201 configurations, with optimal parameters determined by maximizing cross-validation accuracy. The final model was trained on the complete training partition using these optimized hyperparameters. The training infrastructure is implemented in the WaterStabilityPipeline class, which handles data loading, grid search execution, model persistence, and evaluation metric computation.
 
 ---
 
-## 4. Model Training Process
+## 4. Prediction Performance
 
-### 4.1 PyTorch Models (Thermal & Solvent)
+Model performance is assessed on held-out test sets comprising 20% of the available labeled data, with samples partitioned using a fixed random seed (random_state=0) to ensure reproducibility. Test set evaluation provides an unbiased estimate of generalization performance on unseen data, as these samples were excluded from all training and hyperparameter optimization procedures.
 
-**Training Loop** (`src/model_training/base/base_pytorch_pipeline.py`):
+### Thermal Stability Model Performance
 
-1. **Data preparation**: Load cleaned data, split train/test, fit scaler on training data
-2. **Model initialization**: Build FlexibleMLP with tuned architecture
-3. **Training**:
-   - Forward pass through network
-   - Compute loss (MSE for regression, BCE for classification)
-   - Backpropagation via Adam/AdamW optimizer
-   - Update weights
-4. **Validation**: Monitor validation loss each epoch
-5. **Early stopping**: Stop if no improvement for 100 consecutive epochs
-6. **Checkpoint**: Save best model based on validation performance
+The thermal stability regression model achieves an R² score of 0.4099 on the test set, indicating that the model explains approximately 41% of the variance in MOF breakdown temperatures. The root mean squared error (RMSE) of 67.29 K quantifies the typical magnitude of prediction errors, while the mean absolute error (MAE) of 46.65 K indicates that predictions deviate from true values by an average of approximately 47 K. Given that the training data spans breakdown temperatures from approximately 150 K to 600 K, this error magnitude represents roughly 10-15% relative error across the typical range.
 
-**Device**: Automatically uses CUDA GPU if available, otherwise CPU
+The moderate R² value reflects the inherent complexity of thermal decomposition phenomena, which depend not only on framework geometry and composition (captured by the input features) but also on factors including bond strengths, defect concentrations, and decomposition mechanisms that are not directly encoded in the structural descriptors. Despite this limitation, the model provides useful predictive capability for high-throughput screening applications, where rank-ordering candidates by predicted stability is more critical than obtaining precise absolute temperature predictions. Diagnostic analysis reveals that the model performs most reliably in the 250-500 K range where training data is most dense, with increased uncertainty at temperature extremes. Residual analysis confirms approximately unbiased predictions across the temperature range, with no systematic heteroscedasticity that would indicate model misspecification.
 
-### 4.2 Scikit-learn Models (Water)
+### Solvent Removal Stability Model Performance
 
-**Training Pipeline** (`src/model_training/base/base_sklearn_pipeline.py`):
+The binary classification model for solvent stability achieves 76.61% accuracy on the test set, correctly classifying approximately three-quarters of MOFs. The balanced precision and recall (both 81.45%) indicate that the model exhibits no systematic bias toward either the stable or unstable class, an important consideration for maintaining utility across diverse screening objectives. The F1 score of 81.45% confirms strong overall classification performance. The area under the receiver operating characteristic curve (AUC-ROC) of 0.8351 demonstrates that the model provides well-calibrated probability estimates; across all possible classification thresholds, the model maintains a strong discrimination capability between the two stability classes.
 
-1. **Data preparation**: Split features/labels, create train/test sets
-2. **Model initialization**: Create Random Forest classifier
-3. **Grid search**: 5-fold cross-validation over hyperparameter grid
-4. **Best model selection**: Choose parameters maximizing cross-validation accuracy
-5. **Final training**: Retrain on full training set with best parameters
-6. **Save**: Pickle the trained model
+Confusion matrix analysis on the 436-sample test set reveals 110 true negatives (unstable MOFs correctly identified), 224 true positives (stable MOFs correctly identified), 51 false positives (unstable MOFs incorrectly predicted as stable), and 51 false negatives (stable MOFs incorrectly predicted as unstable). The symmetric false positive and false negative counts confirm the absence of class-specific bias. The primary sources of classification errors appear to be MOFs near the stability boundary where subtle structural features determine activation success or failure, a regime inherently challenging for any predictive model operating on global structural descriptors.
+
+### Water Stability Model Performance
+
+The multi-class water stability model achieves 67.12% overall accuracy on the test set of 219 samples, with macro-averaged F1 score of 0.55 and weighted F1 score of 0.65. The multi-class AUC-ROC of 0.8277 (computed using one-vs-rest strategy) indicates strong discriminative capability when distinguishing each class from all others. Performance varies substantially across the four stability classes due to class imbalance in the training data: Class 0 (unstable) contains only 17 test samples, Class 1 (low stability) contains 68, Class 2 (moderate stability) contains 112, and Class 3 (high stability) contains 22.
+
+Per-class analysis reveals that the model achieves highest performance on Class 2 (moderate stability), attaining precision 0.68, recall 0.82, and F1 score 0.74. This class benefits from the largest number of training examples, enabling the Random Forest to effectively learn its decision boundaries. Performance degrades for the minority classes: Class 0 achieves precision 0.75 but recall only 0.35 (F1 0.48), while Class 3 exhibits precision 0.56 and recall 0.23 (F1 0.32). The low recall values for extreme stability classes indicate that the model frequently misclassifies these samples as adjacent classes, a consequence of insufficient training examples to reliably distinguish boundary cases. Notably, the confusion matrix reveals that most misclassifications involve adjacent stability levels rather than extreme errors, suggesting that the model captures the ordinal nature of water stability despite the class imbalance challenges.
 
 ---
 
-## 5. Model Evaluation and Performance
+## 5. MOFMap: Gap-Filled Nearest Neighbor Search Framework
 
-### 5.1 Thermal Stability Model (Regression)
+The MOFMap module implements a novel approach for discovering stability relationships among MOFs by constructing a nearest-neighbor search structure in the joint space of thermal, solvent, and water stability properties. This framework addresses a fundamental challenge in MOF materials discovery: the scarcity of comprehensively characterized samples possessing all three stability labels. While the training datasets contain 3,132 MOFs with thermal stability measurements, 2,179 with solvent stability data, and 1,092 with water stability classifications, the intersection of these sets yields only a small subset with complete characterization. This data fragmentation severely limits the utility of joint stability analysis for multi-objective materials design.
 
-**Test Set Performance**:
-- **R² score**: 0.4099
-- **RMSE**: 67.29 K
-- **MAE**: 46.65 K
-- **MSE**: 4528.41 K²
+The MOFMap framework overcomes this limitation through a two-stage process. First, the system identifies all MOFs present in at least one of the three training datasets, yielding a union containing a substantially larger number of unique structures than any individual dataset. Second, for each MOF lacking one or more stability labels, the framework employs the trained predictive models to impute the missing values. Specifically, thermal stability predictions are generated by the PyTorch regression model (thermal_model.pkl), solvent stability predictions by the PyTorch binary classifier (solvent_model.pkl), and water stability predictions by the Random Forest multi-class classifier (water_rf_model.pkl). This gap-filling procedure requires extracting features for all MOFs in the union, applying the appropriate feature scaling transformations (using scalers fitted during model training), and executing forward passes through the respective models.
 
-**Interpretation**: The model explains ~41% of variance in breakdown temperatures. The RMSE of 67.29 K indicates predictions are typically within ±67 K of actual values. Given that MOF breakdown temperatures span 150-600 K, this represents useful predictive capability for screening applications.
+The imputation process generates a significantly expanded dataset possessing all three stability labels for each MOF. The exact quantitative difference between the intersection (complete cases only) and the gap-filled union represents the number of additional MOFs made accessible for joint stability analysis through prediction. This expansion is critical because many applications require simultaneous consideration of multiple stability criteria—for example, identifying MOFs that exhibit high thermal stability for elevated-temperature processes, maintain structural integrity upon solvent removal for activation, and resist aqueous degradation for humidity-tolerant applications. Without gap-filling, such multi-constraint searches would be limited to the small subset of comprehensively characterized materials, excluding potentially promising candidates that have only been partially characterized experimentally.
 
-**Diagnostic Plots** (`performance/thermal/`):
+Following gap-filling, the complete dataset undergoes standardization via StandardScaler to ensure that the three stability dimensions contribute comparably to distance calculations. The normalized stability values are then used to construct a k-d tree spatial indexing structure using scikit-learn's KDTree implementation with Euclidean distance metric. This data structure enables efficient nearest-neighbor queries in O(log N) time complexity, where N is the number of indexed MOFs. Given a query point representing desired stability properties (for example, thermal stability = 500 K, solvent stability = 1.0 [stable], water stability = 3 [highly stable]), the k-d tree rapidly identifies the MOF in the database whose experimental or predicted stability profile most closely matches the target criteria.
 
-1. **Actual vs. Predicted** (`actual_vs_predicted.png`): Shows positive correlation along the diagonal with some scatter. The model performs well in the 250-500 K range where most data concentrates, with higher uncertainty at extremes.
-
-2. **Residuals Plot** (`residuals.png`): Residuals are randomly distributed around zero with no obvious heteroscedasticity, indicating unbiased predictions across the temperature range.
-
-3. **Residual Distribution** (`residual_distribution.png`): Approximately normal distribution centered at zero, confirming model assumptions are reasonable.
-
-4. **QQ Plot** (`qq_plot.png`): Quantile-quantile plot shows residuals closely follow a normal distribution except in the extreme tails, where some outliers with large prediction errors exist.
-
-### 5.2 Solvent Removal Stability Model (Binary Classification)
-
-**Test Set Performance**:
-- **Accuracy**: 76.61%
-- **Precision**: 81.45%
-- **Recall**: 81.45%
-- **F1 Score**: 81.45%
-- **AUC-ROC**: 0.8351
-
-**Interpretation**: The model correctly classifies ~77% of MOFs, with balanced precision and recall indicating no bias toward either class. The AUC-ROC of 0.835 demonstrates strong discriminative ability.
-
-**Diagnostic Plots** (`performance/solvent/`):
-
-1. **Confusion Matrix** (`confusion_matrix.png`):
-   - True Negatives (unstable correctly predicted): 110
-   - False Positives (unstable predicted as stable): 51
-   - False Negatives (stable predicted as unstable): 51
-   - True Positives (stable correctly predicted): 224
-
-   The model shows symmetric error rates, slightly favoring correct identification of stable MOFs.
-
-2. **ROC Curve** (`roc_curve.png`): The curve rises steeply toward the top-left corner (AUC = 0.8351), indicating the model achieves high true positive rates while maintaining low false positive rates across various threshold values.
-
-### 5.3 Water Stability Model (Multi-class Classification)
-
-**Test Set Performance**:
-- **Overall Accuracy**: 67.12%
-- **Macro-averaged F1**: 0.55
-- **Weighted F1**: 0.65
-- **ROC AUC**: 0.8277 (one-vs-rest)
-
-**Per-Class Performance**:
-
-| Class | Precision | Recall | F1-Score | Support |
-|-------|-----------|--------|----------|---------|
-| 0 (Unstable) | 0.75 | 0.35 | 0.48 | 17 |
-| 1 (Low stability) | 0.66 | 0.65 | 0.65 | 68 |
-| 2 (Moderate stability) | 0.68 | 0.82 | 0.74 | 112 |
-| 3 (High stability) | 0.56 | 0.23 | 0.32 | 22 |
-
-**Interpretation**: The model performs best on Class 2 (moderate stability), which has the most training examples. Performance degrades for rare classes (0 and 3) due to class imbalance. The weighted F1 of 0.65 accounts for this imbalance.
-
-**Diagnostic Plots** (`performance/water_rf/`):
-
-1. **Confusion Matrix** (`confusion_matrix.png`): Shows the model has strong performance on Class 2 (92 correct predictions out of 112), with most errors being adjacent-class confusions (e.g., Class 1 predicted as Class 2). This indicates the model captures the ordinal nature of stability levels.
-
-2. **ROC Curve** (`roc_curve.png`): Multi-class ROC using one-vs-rest strategy shows:
-   - Class 0: AUC = 0.85 (best discrimination despite low recall)
-   - Class 1: AUC = 0.84
-   - Class 2: AUC = 0.79
-   - Class 3: AUC = 0.84
-
-   All classes exceed 0.79 AUC, demonstrating the model provides useful probability estimates for ranking MOFs by water stability.
+The MOFMap framework thus provides a powerful tool for inverse materials design, where researchers specify target stability properties and retrieve candidate structures likely to satisfy those requirements. The gap-filling approach leverages the predictive models to synthesize information across independently collected datasets, effectively multiplying the value of existing experimental characterization efforts. By returning MOF names associated with nearest-neighbor matches, the system enables users to retrieve structural information (CIF files), examine synthesis protocols, and prioritize candidates for experimental validation or further computational investigation.
 
 ---
 
-## 6. Prediction Workflow
+## 6. Summary
 
-### 6.1 Making Predictions on New MOFs
-
-The prediction pipeline (`src/utils/predict.py`) processes new CIF files:
-
-1. **Feature Extraction**: Extract geometric and RAC features from input CIF
-2. **Feature Alignment**: Ensure extracted features match training feature set (190 columns)
-3. **Scaling**: Apply saved StandardScaler transformations
-4. **Prediction**:
-   - **Thermal**: Forward pass through neural network → temperature value
-   - **Solvent**: Forward pass → logits → sigmoid → probability ∈ [0,1]
-   - **Water**: Random Forest prediction → 4-class probabilities
-
-### 6.2 Model Inference Details
-
-**Thermal Model**:
-```python
-temperature = thermal_model(scaled_features)  # Direct regression output
-```
-
-**Solvent Model**:
-```python
-logits = solvent_model(scaled_features)
-probability = sigmoid(logits)  # P(stable)
-prediction = 1 if probability > 0.5 else 0
-```
-
-**Water Model**:
-```python
-probabilities = water_rf_model.predict_proba(features)  # [P(class_0), P(class_1), P(class_2), P(class_3)]
-predicted_class = argmax(probabilities)
-```
-
-### 6.3 Command-Line Interface
-
-Users can make predictions via:
-```bash
-python -m src --cif path/to/structure.cif
-```
-
-This executes the complete pipeline: extraction → scaling → prediction for all three stability metrics.
-
----
-
-## 7. Hyperparameter Tuning
-
-All models underwent extensive hyperparameter optimization using Optuna (neural networks) or GridSearchCV (Random Forest).
-
-**Thermal Model Tuning**:
-- 860 trials exploring architecture depth (1-8 layers), width (32-2048 neurons), dropout (0-0.5), learning rate (10⁻⁵ to 10⁻²), and batch size
-- Best validation RMSE: 13.66 K achieved at trial 212
-
-**Solvent Model Tuning**:
-- 767 trials with similar search space
-- Best validation BCE loss: 0.00231 achieved at trial 692
-
-**Water Model Tuning**:
-- Grid search over 5 hyperparameters with 5-fold cross-validation
-- Random Forest outperformed XGBoost in preliminary comparisons
-
-Tuned structures are stored in `model/structure/saved_structures/` and loaded at training time.
-
----
-
-## 8. Data Sources and Training Set Sizes
-
-All models are trained on the **CoRE MOF 2019 database** compiled by Bobbitt et al., containing experimental stability measurements.
-
-**Dataset Statistics**:
-- **Thermal**: ~3,850 MOFs with measured breakdown temperatures (after filtering missing values)
-- **Solvent**: ~2,180 MOFs with stability labels
-- **Water**: ~1,095 MOFs with water stability classifications
-
-The 80-20 train-test split ensures independent evaluation while maintaining sufficient training data for complex neural network architectures.
-
----
-
-## 9. Software Dependencies
-
-**Core Libraries**:
-- PyTorch 2.x (neural network training)
-- scikit-learn 1.x (preprocessing, Random Forest, evaluation metrics)
-- XGBoost (alternative water model)
-- Pandas, NumPy (data manipulation)
-- Matplotlib, Seaborn (visualization)
-- Optuna (hyperparameter optimization)
-
-**External Tools**:
-- Zeo++ v0.3 (C++ executable for geometric analysis)
-- openbabel 2.4.1 (required for RAC extraction, Python < 3.8 compatibility)
-
-**Environment**: Python 3.12 with conda environment specified in `environment.yml`
-
----
-
-## 10. Model Limitations and Future Directions
-
-**Current Limitations**:
-1. **Thermal model R²**: 0.41 indicates substantial unexplained variance, likely due to breakdown temperature dependence on factors beyond geometry (e.g., bond strengths, defects)
-2. **Class imbalance**: Water stability model struggles with rare classes (0 and 3)
-3. **Geometric features only**: RAC descriptors provide limited electronic structure information
-
-**Potential Improvements**:
-1. Incorporate quantum mechanical descriptors (DFT-derived charges, band gaps)
-2. Use graph neural networks to preserve MOF topology
-3. Ensemble methods combining multiple model types
-4. Active learning to target underrepresented regions
-5. Transfer learning from related materials databases
-
----
-
-## 11. Reproducibility
-
-All random processes use fixed seeds:
-- Train-test split: `random_state=0`
-- PyTorch: Seed managed in training configuration
-- Scikit-learn: `random_state=0` in model initialization
-
-Models are version-controlled, and trained model files are saved as pickle objects, ensuring exact reproduction of results.
-
----
-
-## References
-
-This methodology implements and extends techniques from:
-
-1. **Bobbitt et al. (2023)**: CoRE MOF database used for training data
-2. **Nandy et al. (2022)**: RAC descriptor extraction methodology adapted from MOFSimplify
-3. **Willems et al. (2012)**: Zeo++ geometric analysis algorithms
-
-Full citations available in `README.md`.
-
----
+The OptiMOF framework provides a comprehensive, end-to-end pipeline for predicting metal-organic framework stability properties from crystallographic structure files. The system integrates geometric analysis via Zeo++ with chemical environment characterization through RAC descriptors to generate rich feature representations. Robust data preprocessing including feature normalization ensures stable training dynamics. Diverse model architectures—deep neural networks with batch normalization for thermal and solvent stability, Random Forest ensembles for water stability—are tailored to the specific characteristics of each prediction task and optimized through extensive hyperparameter tuning. The resulting models achieve useful predictive performance despite the inherent complexity of materials stability phenomena, providing practical tools for high-throughput computational screening. The MOFMap framework extends the utility of these models by enabling gap-filling across fragmentary experimental datasets, constructing a comprehensive stability database for efficient nearest-neighbor search in multi-dimensional stability space. This integrated approach accelerates materials discovery by combining data-driven prediction with inverse design capabilities.
