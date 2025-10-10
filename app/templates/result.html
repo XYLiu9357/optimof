@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Predictions</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Predictions</h1>
+
+    <h2>Thermal Breakdown Temperature</h2>
+    <pre>{{ pred1 }}</pre>
+
+    <h2>Solvent Removal Stability</h2>
+    <pre>{{ pred2 }}</pre>
+
+    <h2>Water Stability</h2>
+    <pre>{{ pred3 }}</pre>
+
+    <a href="/">Go back</a>
+</body>
+</html>
