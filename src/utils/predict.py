@@ -20,6 +20,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
 from src.model_features.feature_extraction import extract_features
+from src.model_training.water_stability_model import WaterStabilityPipeline
 
 from .mof_map import MOFMap
 
@@ -60,6 +61,8 @@ def sigmoid(logits: np.ndarray):
 def extract_from_file(
     project_path: Path, target_path: Path, id=current_time()
 ) -> pd.DataFrame:
+    project_path = Path(project_path)
+    target_path = Path(target_path)
     extracted_df = extract_features(project_path, target_path, id)
 
     # Check if feature extraction failed (returns empty DataFrame)
@@ -80,6 +83,10 @@ def extract_from_file(
         label_cols = ["thermal", "solvent", "water"]
         feature_cols = [col for col in extracted_df.columns if col not in label_cols]
 
+    # Ensure 'name' is in feature_cols for indexing
+    if "name" not in feature_cols:
+        feature_cols.append("name")
+
     # Filter to only the feature columns
     feature_df = extracted_df.loc[:, feature_cols]
     feature_df = feature_df.set_index("name")
@@ -97,6 +104,11 @@ def trim_labels(df: pd.DataFrame):
 def pred_ann(model_path: Path, scalar_path: Path, feature_df: pd.DataFrame):
     # Standard scale data
     scalar: StandardScaler = joblib.load(scalar_path)
+
+    # Reorder features to match the order expected by the scaler
+    expected_features = scalar.feature_names_in_
+    feature_df = feature_df[expected_features]
+
     scaled_df = scalar.transform(feature_df)
 
     # Load model
@@ -132,7 +144,13 @@ def pred_water(model_path: Path, feature_df: pd.DataFrame) -> bool:
         "lc-I-0-all",
         "mc-I-0-all",
     ]
-    clean_water_df = feature_df.drop(water_additional_drops, axis=1)
+    clean_water_df = feature_df.drop(water_additional_drops, axis=1, errors='ignore')
+
+    # Reorder features to match the order expected by the model
+    expected_features = model.feature_names_in_
+    # Only use features that are available in the dataset
+    available_features = [f for f in expected_features if f in clean_water_df.columns]
+    clean_water_df = clean_water_df[available_features]
 
     # Make prediction
     probs = model.predict_proba(clean_water_df)
@@ -177,13 +195,13 @@ def predict_df(project_path: Path, feature_df: pd.DataFrame):
 
     # Thermal model
     thermal_model_path = model_dir / "thermal_model.pkl"
-    thermal_scalar_path = scalar_dir / "thermal_scalar.pkl"
+    thermal_scalar_path = scalar_dir / "thermal_scaler.pkl"
     temperatures = pred_ann(thermal_model_path, thermal_scalar_path, feature_df)
     print(f"Thermal model prediction successful: {temperatures}")
 
     # Solvent model
     solvent_model_path = model_dir / "solvent_model.pkl"
-    solvent_scalar_path = scalar_dir / "solvent_scalar.pkl"
+    solvent_scalar_path = scalar_dir / "solvent_scaler.pkl"
     solvent_logits = pred_ann(solvent_model_path, solvent_scalar_path, feature_df)
     solvent_flags = sigmoid(solvent_logits)
     print(f"Solvent model prediction successful: {solvent_flags}")
@@ -239,9 +257,9 @@ def fill_all_unknown(project_path: Path, data_path: Path) -> pd.DataFrame:
     model_dir = project_path / "model"
     scalar_dir = model_dir / "scalers"
     thermal_model_path = model_dir / "thermal_model.pkl"
-    thermal_scalar_path = scalar_dir / "thermal_scalar.pkl"
+    thermal_scalar_path = scalar_dir / "thermal_scaler.pkl"
     solvent_model_path = model_dir / "solvent_model.pkl"
-    solvent_scalar_path = scalar_dir / "solvent_scalar.pkl"
+    solvent_scalar_path = scalar_dir / "solvent_scaler.pkl"
     water_model_path = model_dir / "water_rf_model.pkl"
 
     def fill_thermal(target_df: pd.DataFrame):

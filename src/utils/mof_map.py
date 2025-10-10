@@ -8,6 +8,7 @@ nearest neighbor query for processed MOFs.
 """
 
 import os
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -22,8 +23,9 @@ class MOFMap:
         dist_metric="euclidean",
         project_path=".",
     ):
-        self.import_file_path = os.path.join(project_path, "data", "mof-tree.pkl")
-        self.export_filepath = os.path.join(project_path, "data", "mof-tree.pkl")
+        project_path = Path(project_path)
+        self.import_file_path = project_path / "data" / "mof-tree.pkl"
+        self.export_filepath = project_path / "data" / "mof-tree.pkl"
         self.dist_metric = dist_metric
 
         if mof_df is None:

@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -22,6 +23,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
 from app.app import run_flask_client
+from src.model_training.water_stability_model import WaterStabilityPipeline
 from src.utils.mof_map import MOFMap
 from src.utils.predict import (
     fill_all_unknown,
@@ -30,10 +32,10 @@ from src.utils.predict import (
     predict_from_file,
 )
 
-project_path = "."
-data_dir = os.path.join(project_path, "data")
-data_pkl_path = os.path.join(data_dir, "all_in_one.pkl")
-mof_map_file_path = os.path.join(data_dir, "mof_map.pkl")
+project_path = Path(".")
+data_dir = project_path / "data"
+data_pkl_path = data_dir / "all_in_one.pkl"
+mof_map_file_path = data_dir / "mof_map.pkl"
 
 
 # Get current date and time as a string
@@ -57,7 +59,7 @@ def helper_predict_cif(target_file: str):
         print(f"**Error: {target_file} is not a valid file")
         exit(1)
 
-    target_path = os.path.join(project_path, target_file)
+    target_path = project_path / target_file
     print(f"**Predicting properties of {target_path}**")
 
     # Property prediction (with print)
@@ -73,7 +75,7 @@ def helper_predict_cif(target_file: str):
             "water": np.argmax(water_flags, axis=1) + 1,
         }
     )
-    mof_map_path = os.path.join(data_dir, "mof_map.pkl")
+    mof_map_path = data_dir / "mof_map.pkl"
     target_nn = get_nearest_neighbor(mof_map_path, prop_df)
     print(f"Nearest neighbor found: {target_nn}")
     print("**Prediction complete**")
@@ -108,7 +110,7 @@ def pred_multiple(all_files, num_cifs=None):
             break
         file_name = os.fsdecode(file)
         if file_name.endswith(".cif"):
-            file_path = os.path.join(target_directory, file_name)
+            file_path = Path(target_directory) / file_name
             tempeartures, solvent_flags, water_flags = list(
                 helper_predict_cif(file_path)
             )
@@ -157,7 +159,7 @@ elif len(sys.argv) == 3:
         all_files = os.listdir(target_directory)
         all_files.sort()
         output_df = pred_multiple(all_files)
-        output_df.to_csv(os.path.join(project_path, f"{current_time()}_results.csv"))
+        output_df.to_csv(project_path / f"{current_time()}_results.csv")
         print(output_df)
     # Build MOF map data base
     elif sys.argv[1] == "-b" or sys.argv[1] == "--build-db":
@@ -178,7 +180,7 @@ elif len(sys.argv) == 4:
         all_files = os.listdir(target_directory)
         all_files.sort()
         output_df = pred_multiple(all_files, num_cifs)
-        output_df.to_csv(os.path.join(project_path, f"{current_time()}_results.csv"))
+        output_df.to_csv(project_path / f"{current_time()}_results.csv")
         # print(output_df)
 else:
     print("Module called with unknown argument format")

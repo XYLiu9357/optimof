@@ -5,6 +5,7 @@ Run feature_extraction commands on all CIF files in the specified directory.
 import multiprocessing as mp
 import os
 import sys
+from pathlib import Path
 
 import pandas as pd
 from feature_extraction import extract_features
@@ -20,7 +21,7 @@ def _mpi_extract(cif_file, src_dir, project_path):
     :param src_dir: source directory for cif files
     :param project_path: path to the project
     """
-    target_path = os.path.join(src_dir, cif_file)
+    target_path = Path(src_dir) / cif_file
     cif_without_suffix = cif_file[:-4]
     cur_feature_df = extract_features(project_path, target_path, id=cif_without_suffix)
     return cur_feature_df
@@ -91,7 +92,7 @@ def extract_all_to_csv(
         print(f"Invalid destination: {dest_dir}")
 
     # Export path
-    export_file_path = os.path.join(dest_dir, file_name)
+    export_file_path = Path(dest_dir) / file_name
 
     # Overwrite warning
     if any(file_name in file_found for file_found in os.listdir(dest_dir)):
@@ -115,8 +116,8 @@ def extract_all_to_csv(
 
 if __name__ == "__main__":
     print("***Running extract_all as main***")
-    project_path = "."
-    src_dir = os.path.join(".", "CoRE2019")
-    dest_dir = os.path.join(".", "data")
+    project_path = Path(".")
+    src_dir = project_path / "CoRE2019"
+    dest_dir = project_path / "data"
     extract_all_to_csv(project_path, src_dir, dest_dir, max_lim=200)
     print("***extract_all exited successfully***")
