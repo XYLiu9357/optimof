@@ -96,30 +96,30 @@ tune-water:
 .PHONY: tune-all
 tune-all: tune-thermal tune-solvent tune-water
 
-# Model training
-.PHONY: train-thermal
-train-thermal:
-ifdef STRUCTURE
-	python -m src.model_training.thermal_model --structure $(STRUCTURE)
-else
-	python -m src.model_training.thermal_model
-endif
-
-.PHONY: train-solvent
-train-solvent:
-ifdef STRUCTURE
-	python -m src.model_training.solvent_model --structure $(STRUCTURE)
-else
-	python -m src.model_training.solvent_model
-endif
-
-.PHONY: train-water
-train-water:
-	python -m src.model_training.water_stability_model
-
-.PHONY: train-all
-train-all: train-thermal train-solvent train-water
-
+# # Model training
+# .PHONY: train-thermal
+# train-thermal:
+# ifdef STRUCTURE
+# 	python -m src.model_training.thermal_model --structure $(STRUCTURE)
+# else
+# 	python -m src.model_training.thermal_model
+# endif
+# 
+# .PHONY: train-solvent
+# train-solvent:
+# ifdef STRUCTURE
+# 	python -m src.model_training.solvent_model --structure $(STRUCTURE)
+# else
+# 	python -m src.model_training.solvent_model
+# endif
+# 
+# .PHONY: train-water
+# train-water:
+# 	python -m src.model_training.water_stability_model
+# 
+# .PHONY: train-all
+# train-all: train-thermal train-solvent train-water
+ 
 # Model testing
 .PHONY: test-thermal
 test-thermal:
