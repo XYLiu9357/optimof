@@ -19,13 +19,7 @@ import xgboost
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
-from src.model_features import extract_features
-from src.model_training.solvent_model import SolventModel
-from src.model_training.thermal_model import ThermalModel
-from src.model_training.water_stability_model import (
-    WaterStabilityBoost,
-    WaterStabilityRF,
-)
+from src.model_features.feature_extraction import extract_features
 
 from .mof_map import MOFMap
 
@@ -67,6 +61,11 @@ def extract_from_file(
     project_path: Path, target_path: Path, id=current_time()
 ) -> pd.DataFrame:
     extracted_df = extract_features(project_path, target_path, id)
+
+    # Check if feature extraction failed (returns empty DataFrame)
+    if extracted_df.empty:
+        raise ValueError(f"Feature extraction failed for {target_path}. The CIF file may be invalid or the extraction pipeline encountered an error.")
+
     extracted_df.loc[:, "name"] = id
 
     # Get expected feature columns from existing clean data

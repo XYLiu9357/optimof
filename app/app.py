@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 from flask import Flask, render_template, request
 
-from src.utils import predict_from_file
+from src.utils.predict import predict_from_file
 
 project_path = Path(".")
 app = Flask(__name__)

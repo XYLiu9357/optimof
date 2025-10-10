@@ -21,15 +21,9 @@ import xgboost
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
-from app import run_flask_client
-from src.model_training.solvent_model import SolventModel
-from src.model_training.thermal_model import ThermalModel
-from src.model_training.water_stability_model import (
-    WaterStabilityBoost,
-    WaterStabilityRF,
-)
-from src.utils import (
-    MOFMap,
+from app.app import run_flask_client
+from src.utils.mof_map import MOFMap
+from src.utils.predict import (
     fill_all_unknown,
     get_nearest_neighbor,
     predict_df,
@@ -40,7 +34,6 @@ project_path = "."
 data_dir = os.path.join(project_path, "data")
 data_pkl_path = os.path.join(data_dir, "all_in_one.pkl")
 mof_map_file_path = os.path.join(data_dir, "mof_map.pkl")
-df_all = joblib.load(data_pkl_path)
 
 
 # Get current date and time as a string

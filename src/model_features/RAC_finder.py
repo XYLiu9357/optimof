@@ -31,13 +31,25 @@ def main():
             xyzpath=str(rac_dir / "temp.xyz"),
         )
 
+        # Debug: Print what was returned
+        print(f"DEBUG: full_names length = {len(full_names)}, full_descriptors length = {len(full_descriptors)}")
+        print(f"DEBUG: full_names = {full_names}")
+        print(f"DEBUG: full_descriptors = {full_descriptors}")
+
         # Check if featurization was successful
         if len(full_names) <= 1 and len(full_descriptors) <= 1:
-            log_file.write_text("FAILED")
+            log_file.write_text(f"FAILED: Insufficient descriptors (names={len(full_names)}, descriptors={len(full_descriptors)})")
             return "FAILED"
 
-    except (ValueError, NotImplementedError, AssertionError):
-        log_file.write_text("FAILED")
+        # Success case
+        log_file.write_text("SUCCESS")
+        return "SUCCESS"
+
+    except (ValueError, NotImplementedError, AssertionError) as e:
+        log_file.write_text(f"FAILED: {str(e)}")
+        return "FAILED"
+    except Exception as e:
+        log_file.write_text(f"FAILED: Unexpected error: {str(e)}")
         return "FAILED"
 
 
