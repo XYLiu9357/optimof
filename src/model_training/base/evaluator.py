@@ -1,4 +1,10 @@
-"""Model evaluation utilities with unified interface."""
+"""Model evaluation utilities with unified interface.
+
+Plot specifications:
+- Confusion matrices: Font size 15 for all elements.
+- Other plots: Font size 15 for labels/titles, tick size 15,
+    figsize=(7,5), and legend font size 12.
+"""
 
 import math
 from pathlib import Path
@@ -68,42 +74,46 @@ class RegressionEvaluator:
         save_dir.mkdir(parents=True, exist_ok=True)
 
         # Actual vs Predicted
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(7, 5))
         plt.scatter(y_true, y_pred, alpha=0.5)
         plt.plot(
             [min(y_true), max(y_true)],
             [min(y_true), max(y_true)],
             color="red",
         )
-        plt.xlabel("Actual Values")
-        plt.ylabel("Predicted Values")
-        plt.title("Actual vs Predicted Values")
+        plt.xlabel("Actual Values", fontsize=15)
+        plt.ylabel("Predicted Values", fontsize=15)
+        plt.title("Actual vs Predicted Values", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "actual_vs_predicted.png")
         plt.close()
 
         # Residuals
         residuals = y_true - y_pred
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(7, 5))
         plt.scatter(y_pred, residuals, alpha=0.5)
         plt.hlines(0, min(y_pred), max(y_pred), colors="red")
-        plt.xlabel("Predicted Values")
-        plt.ylabel("Residuals")
-        plt.title("Residuals vs Predicted Values")
+        plt.xlabel("Predicted Values", fontsize=15)
+        plt.ylabel("Residuals", fontsize=15)
+        plt.title("Residuals vs Predicted Values", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "residuals.png")
         plt.close()
 
         # Residuals distribution
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(7, 5))
         sns.histplot(residuals, kde=True)
-        plt.xlabel("Residuals")
-        plt.title("Distribution of Residuals")
+        plt.xlabel("Residuals", fontsize=15)
+        plt.title("Distribution of Residuals", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "residual_distribution.png")
         plt.close()
 
         # QQ plot
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(7, 5))
         stats.probplot(residuals.flatten(), dist="norm", plot=plt)
-        plt.title("QQ Plot of Residuals")
+        plt.title("QQ Plot of Residuals", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "qq_plot.png")
         plt.close()
 
@@ -165,23 +175,25 @@ class BinaryClassificationEvaluator:
 
         # Confusion matrix
         cm = confusion_matrix(y_true, y_pred)
-        plt.figure(figsize=(6, 4))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-        plt.xlabel("Predicted Labels")
-        plt.ylabel("True Labels")
-        plt.title("Confusion Matrix")
+        plt.figure(figsize=(7, 5))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", annot_kws={"fontsize": 15})
+        plt.xlabel("Predicted Labels", fontsize=15)
+        plt.ylabel("True Labels", fontsize=15)
+        plt.title("Confusion Matrix", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "confusion_matrix.png")
         plt.close()
 
         # ROC curve
         fpr, tpr, _ = roc_curve(y_true, y_prob)
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(7, 5))
         plt.plot(fpr, tpr, label=f"AUC = {roc_auc_score(y_true, y_prob):.4f}")
         plt.plot([0, 1], [0, 1], linestyle="--", color="red")
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("ROC Curve")
-        plt.legend(loc="lower right")
+        plt.xlabel("False Positive Rate", fontsize=15)
+        plt.ylabel("True Positive Rate", fontsize=15)
+        plt.title("ROC Curve", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
+        plt.legend(loc="lower right", fontsize=12)
         plt.savefig(save_dir / "roc_curve.png")
         plt.close()
 
@@ -241,16 +253,17 @@ class MultiClassEvaluator:
 
         # Confusion matrix
         cm = confusion_matrix(y_true, y_pred)
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False)
-        plt.title("Confusion Matrix")
-        plt.xlabel("Predicted")
-        plt.ylabel("Actual")
+        plt.figure(figsize=(7, 5))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, annot_kws={"fontsize": 15})
+        plt.title("Confusion Matrix", fontsize=15)
+        plt.xlabel("Predicted", fontsize=15)
+        plt.ylabel("Actual", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "confusion_matrix.png")
         plt.close()
 
         # ROC curve for each class
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(7, 5))
         sns.set(style="whitegrid")
 
         # Binarize the labels for multi-class ROC
@@ -274,9 +287,10 @@ class MultiClassEvaluator:
         sns.lineplot(x=[0, 1], y=[0, 1], color="navy", lw=2, linestyle="--")
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("Receiver Operating Characteristic")
-        plt.legend(loc="lower right")
+        plt.xlabel("False Positive Rate", fontsize=15)
+        plt.ylabel("True Positive Rate", fontsize=15)
+        plt.title("Receiver Operating Characteristic", fontsize=15)
+        plt.tick_params(axis='both', labelsize=15)
+        plt.legend(loc="lower right", fontsize=12)
         plt.savefig(save_dir / "roc_curve.png")
         plt.close()
