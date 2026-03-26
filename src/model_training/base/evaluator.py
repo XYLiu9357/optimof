@@ -73,7 +73,7 @@ class RegressionEvaluator:
         """
         save_dir.mkdir(parents=True, exist_ok=True)
 
-        # Actual vs Predicted
+        # True vs Predicted
         plt.figure(figsize=(7, 5))
         plt.scatter(y_true, y_pred, alpha=0.5)
         plt.plot(
@@ -81,11 +81,11 @@ class RegressionEvaluator:
             [min(y_true), max(y_true)],
             color="red",
         )
-        plt.xlabel("Actual Values", fontsize=15)
+        plt.xlabel("True Values", fontsize=15)
         plt.ylabel("Predicted Values", fontsize=15)
-        plt.title("Actual vs Predicted Values", fontsize=15)
+        plt.title("True vs Predicted Values", fontsize=15)
         plt.tick_params(axis='both', labelsize=15)
-        plt.savefig(save_dir / "actual_vs_predicted.png")
+        plt.savefig(save_dir / "true_vs_predicted.png")
         plt.close()
 
         # Residuals
@@ -173,12 +173,12 @@ class BinaryClassificationEvaluator:
         """
         save_dir.mkdir(parents=True, exist_ok=True)
 
-        # Confusion matrix
-        cm = confusion_matrix(y_true, y_pred)
+        # Confusion matrix (transposed)
+        cm = confusion_matrix(y_true, y_pred).T
         plt.figure(figsize=(7, 5))
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", annot_kws={"fontsize": 15})
-        plt.xlabel("Predicted Labels", fontsize=15)
-        plt.ylabel("True Labels", fontsize=15)
+        plt.xlabel("True Labels", fontsize=15)
+        plt.ylabel("Predicted Labels", fontsize=15)
         plt.title("Confusion Matrix", fontsize=15)
         plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "confusion_matrix.png")
@@ -251,13 +251,13 @@ class MultiClassEvaluator:
         """
         save_dir.mkdir(parents=True, exist_ok=True)
 
-        # Confusion matrix
-        cm = confusion_matrix(y_true, y_pred)
+        # Confusion matrix (transposed)
+        cm = confusion_matrix(y_true, y_pred).T
         plt.figure(figsize=(7, 5))
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, annot_kws={"fontsize": 15})
         plt.title("Confusion Matrix", fontsize=15)
-        plt.xlabel("Predicted", fontsize=15)
-        plt.ylabel("Actual", fontsize=15)
+        plt.xlabel("True", fontsize=15)
+        plt.ylabel("Predicted", fontsize=15)
         plt.tick_params(axis='both', labelsize=15)
         plt.savefig(save_dir / "confusion_matrix.png")
         plt.close()

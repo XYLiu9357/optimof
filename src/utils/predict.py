@@ -214,13 +214,16 @@ def predict_df(project_path: Path, feature_df: pd.DataFrame):
 
 
 # Make predictions based on CIF file
-def predict_from_file(project_path: Path, target_path: Path) -> pd.DataFrame:
+def predict_from_file(project_path: Path, target_path: Path):
     # Extract feature vector
-    feature_df = extract_from_file(project_path, target_path)
-    print("Feature extraction successful")
-
-    temperatures, solvent_flags, water_flags = predict_df(project_path, feature_df)
-    return temperatures, solvent_flags, water_flags
+    try:
+        feature_df = extract_from_file(project_path, target_path)
+        print("Feature extraction successful")
+        temperatures, solvent_flags, water_flags = predict_df(project_path, feature_df)
+        return temperatures, solvent_flags, water_flags, True
+    except ValueError:
+        temperatures, solvent_flags, water_flags = [[None]], [[None]], [[None]]
+        return temperatures, solvent_flags, water_flags, False
 
 
 # Nearest neighbor search

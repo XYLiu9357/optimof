@@ -55,7 +55,7 @@ def current_time():
 def helper_predict_cif(target_file: str):
     # ACAJIY_clean.cif, 1499489-acs.cgd.6b01265_1499490_clean.cif
     print(f"Input file detected, running feature extraction on file {target_file}")
-    if not os.path.isfile(target_file) or target_file[-4:] != ".cif":
+    if not os.path.isfile(target_file) or target_file.suffix != ".cif":
         print(f"**Error: {target_file} is not a valid file")
         exit(1)
 
@@ -63,22 +63,26 @@ def helper_predict_cif(target_file: str):
     print(f"**Predicting properties of {target_path}**")
 
     # Property prediction (with print)
-    tempeartures, solvent_flags, water_flags = predict_from_file(
+    # Returns [[None]] if feature extraction is unsuccessful
+    tempeartures, solvent_flags, water_flags, prediction_success = predict_from_file(
         project_path, target_path
     )
 
     # Nearest neighbor
-    prop_df = pd.DataFrame(
-        data={
-            "thermal": tempeartures[0],
-            "solvent": solvent_flags[0],
-            "water": np.argmax(water_flags, axis=1) + 1,
-        }
-    )
-    mof_map_path = data_dir / "mof_map" / "mof_map_filled.pkl"
-    target_nn = get_nearest_neighbor(mof_map_path, prop_df, project_path)
-    print(f"Nearest neighbor found: {target_nn}")
-    print("**Prediction complete**")
+    if prediction_success:
+        prop_df = pd.DataFrame(
+            data={
+                "thermal": tempeartures[0],
+                "solvent": solvent_flags[0],
+                "water": np.argmax(water_flags, axis=1) + 1,
+            }
+        )
+        mof_map_path = data_dir / "mof_map" / "mof_map_filled.pkl"
+        target_nn = get_nearest_neighbor(mof_map_path, prop_df, project_path)
+        print(f"Nearest neighbor found: {target_nn}")
+        print("**Prediction complete**")
+    else:
+        print("**Prediction unsuccessful - moving on**")
     return tempeartures, solvent_flags, water_flags
 
 
